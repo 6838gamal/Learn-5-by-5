@@ -4,7 +4,7 @@
 import type React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { GraduationCap, LayoutDashboard, Menu, LeapForward } from "lucide-react";
+import { GraduationCap, LayoutDashboard, Menu, StepForward } from "lucide-react"; // Changed LeapForward to StepForward
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -46,7 +46,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="flex h-full max-h-screen flex-col gap-2">
           <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
             <Link href="/" className="flex items-center gap-2 font-semibold text-primary">
-              <LeapForward className="h-6 w-6" />
+              <StepForward className="h-6 w-6" /> {/* Changed LeapForward to StepForward */}
               <span>LinguaLeap</span>
             </Link>
           </div>
@@ -78,7 +78,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   href="#"
                   className="flex items-center gap-2 text-lg font-semibold mb-4 text-primary"
                 >
-                  <LeapForward className="h-6 w-6" />
+                  <StepForward className="h-6 w-6" /> {/* Changed LeapForward to StepForward */}
                   <span>LinguaLeap</span>
                 </Link>
                 {navItems.map((item) => (
@@ -88,7 +88,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </SheetContent>
           </Sheet>
            <div className="flex items-center gap-2 font-semibold text-primary md:hidden">
-             <LeapForward className="h-6 w-6" />
+             <StepForward className="h-6 w-6" /> {/* Changed LeapForward to StepForward */}
              <span>LinguaLeap</span>
            </div>
         </header>
