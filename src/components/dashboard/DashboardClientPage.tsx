@@ -8,24 +8,39 @@ import { BarChart, BookOpenText, Layers, ListChecks, Clock } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow } from 'date-fns';
 import StatCard from "./StatCard";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 export default function DashboardClientPage() {
   const [stats, setStats] = useState<LearningStats | null>(null);
   const [recentActivity, setRecentActivity] = useState<WordSetRecord[]>([]);
   const [isClient, setIsClient] = useState(false);
+  const [selectedActivity, setSelectedActivity] = useState<WordSetRecord | null>(null);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
-    // Ensure localStorage access only on client
     if (typeof window !== "undefined") {
       setStats(getStats());
       const activityData = getActivityData();
-      setRecentActivity(activityData.learnedItems.slice(0, 5)); // Get last 5 activities
+      setRecentActivity(activityData.learnedItems.slice(0, 10)); // Get last 10 activities
     }
   }, []);
 
+  const handleActivityClick = (activity: WordSetRecord) => {
+    setSelectedActivity(activity);
+    setIsDetailDialogOpen(true);
+  };
+
   if (!isClient) {
-    return ( // Basic skeleton or loading state for SSR/initial render
+    return (
       <div className="container mx-auto py-8">
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {[...Array(3)].map((_, i) => (
@@ -76,7 +91,7 @@ export default function DashboardClientPage() {
             Recent Activity
           </CardTitle>
           <CardDescription>
-            Your last few learning sessions.
+            Your last few learning sessions. Click on an item to see details.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -84,7 +99,11 @@ export default function DashboardClientPage() {
             <ScrollArea className="h-[300px]">
               <ul className="space-y-4">
                 {recentActivity.map((activity) => (
-                  <li key={activity.id} className="p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                  <li 
+                    key={activity.id} 
+                    className="p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                    onClick={() => handleActivityClick(activity)}
+                  >
                     <div className="flex justify-between items-center mb-1">
                       <h4 className="font-semibold text-md text-primary-foreground bg-primary px-2 py-1 rounded-md inline-block">{activity.language} - {activity.field}</h4>
                        <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -92,7 +111,7 @@ export default function DashboardClientPage() {
                         {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
                       </span>
                     </div>
-                    <p className="text-sm text-muted-foreground">Words: {activity.words.join(", ")}</p>
+                    <p className="text-sm text-muted-foreground">Words: {activity.words.join(", ").substring(0, 50)}{activity.words.join(", ").length > 50 ? "..." : ""}</p>
                   </li>
                 ))}
               </ul>
@@ -102,6 +121,51 @@ export default function DashboardClientPage() {
           )}
         </CardContent>
       </Card>
+
+      {selectedActivity && (
+        <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+          <DialogContent className="sm:max-w-md bg-card">
+            <DialogHeader>
+              <DialogTitle className="text-primary flex items-center gap-2">
+                <Layers className="w-5 h-5 text-accent" />
+                Activity Details
+              </DialogTitle>
+              <DialogDescription className="text-muted-foreground">
+                Session on <span className="font-semibold text-foreground">{selectedActivity.field}</span> in <span className="font-semibold text-foreground">{selectedActivity.language}</span>.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="flex items-center">
+                <span className="text-sm font-medium text-muted-foreground w-20">Language:</span>
+                <span className="text-sm text-foreground">{selectedActivity.language}</span>
+              </div>
+              <div className="flex items-center">
+                <span className="text-sm font-medium text-muted-foreground w-20">Field:</span>
+                <span className="text-sm text-foreground">{selectedActivity.field}</span>
+              </div>
+              <div className="flex items-start">
+                <span className="text-sm font-medium text-muted-foreground w-20 mt-1">Words:</span>
+                <ScrollArea className="h-20 w-full rounded-md border p-2">
+                  <ul className="list-disc list-inside text-sm text-foreground">
+                    {selectedActivity.words.map((word, index) => (
+                      <li key={index}>{word}</li>
+                    ))}
+                  </ul>
+                </ScrollArea>
+              </div>
+              <div className="flex items-center">
+                <span className="text-sm font-medium text-muted-foreground w-20">Date:</span>
+                <span className="text-sm text-foreground">
+                  {new Date(selectedActivity.timestamp).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                </span>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
