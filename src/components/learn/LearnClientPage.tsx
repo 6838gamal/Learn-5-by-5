@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -21,13 +21,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LANGUAGES, FIELDS, type SelectionOption } from "@/constants/data";
+import { LANGUAGES, FIELDS } from "@/constants/data";
 import { handleGenerateWordSet, type GenerateWordSetActionResult } from "@/app/actions";
 import { addWordSet } from "@/lib/activityStore";
 import { useToast } from "@/hooks/use-toast";
-import { Wand2, AlertTriangle, Languages, Lightbulb } from "lucide-react";
+import { Wand2, AlertTriangle, Languages, Lightbulb, Volume2, FileText } from "lucide-react"; // Added Volume2, FileText
 import WordCard from "./WordCard";
 
 const learnFormSchema = z.object({
@@ -39,6 +38,7 @@ type LearnFormValues = z.infer<typeof learnFormSchema>;
 
 export default function LearnClientPage() {
   const [generatedWords, setGeneratedWords] = useState<string[]>([]);
+  const [generatedSentence, setGeneratedSentence] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -55,15 +55,17 @@ export default function LearnClientPage() {
     setIsLoading(true);
     setError(null);
     setGeneratedWords([]);
+    setGeneratedSentence("");
 
     const result: GenerateWordSetActionResult = await handleGenerateWordSet(data);
 
-    if (result.words) {
+    if (result.words && result.sentence) {
       setGeneratedWords(result.words);
-      addWordSet(data.language, data.field, result.words);
+      setGeneratedSentence(result.sentence);
+      addWordSet(data.language, data.field, result.words); // Sentence is not stored in activityStore for now
       toast({
-        title: "Words Generated!",
-        description: `A new set of words for ${data.field} in ${data.language} is ready.`,
+        title: "Words & Sentence Generated!",
+        description: `A new set for ${data.field} in ${data.language} is ready.`,
       });
     } else if (result.error) {
       setError(result.error);
@@ -72,26 +74,33 @@ export default function LearnClientPage() {
         title: "Generation Failed",
         description: result.error,
       });
+       if(result.words && result.words.length > 0) { // Still show words if sentence failed
+        setGeneratedWords(result.words);
+      }
     }
     setIsLoading(false);
   }
   
-  // Placeholder for client-side only rendering
   const [isClient, setIsClient] = useState(false);
   useEffect(() => {
     setIsClient(true);
   }, []);
 
+  const handlePlaySentenceAudio = () => {
+    // Placeholder for future TTS functionality
+    console.log(`Playing audio for sentence: ${generatedSentence}`);
+    alert(`Audio playback for the sentence is not yet implemented.`);
+  };
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-0">
       <Card className="w-full max-w-2xl mx-auto shadow-xl">
         <CardHeader>
           <CardTitle className="text-3xl font-bold text-center text-primary">
-            Discover New Words
+            Discover New Words & Sentences
           </CardTitle>
           <CardDescription className="text-center text-lg">
-            Select a language and a field of knowledge to generate a set of 5 related words.
+            Select a language and field to generate 5 words and an example sentence.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -159,7 +168,7 @@ export default function LearnClientPage() {
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <Wand2 className="w-5 h-5" /> Generate Words
+                    <Wand2 className="w-5 h-5" /> Generate Content
                   </div>
                 )}
               </Button>
@@ -176,38 +185,65 @@ export default function LearnClientPage() {
           {isClient && (
             <div className="mt-8">
             {isLoading && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[...Array(5)].map((_, i) => (
-                  <Card key={i} className="shadow-sm">
-                    <CardHeader>
-                      <Skeleton className="h-6 w-3/4" />
-                    </CardHeader>
-                    <CardContent>
-                      <Skeleton className="h-4 w-full mb-2" />
-                      <Skeleton className="h-4 w-5/6" />
-                    </CardContent>
-                  </Card>
-                ))}
+              <div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Card key={i} className="shadow-sm">
+                      <CardHeader>
+                        <Skeleton className="h-6 w-3/4" />
+                      </CardHeader>
+                      <CardContent>
+                        <Skeleton className="h-4 w-full mb-2" />
+                        <Skeleton className="h-4 w-5/6" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+                <div className="mt-6">
+                  <Skeleton className="h-8 w-1/3 mb-2" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
               </div>
             )}
 
             {!isLoading && generatedWords.length > 0 && (
               <>
-                <h3 className="text-2xl font-semibold mb-4 text-center text-primary">Your Word Set:</h3>
+                <h3 className="text-2xl font-semibold mb-4 text-center text-primary flex items-center justify-center gap-2">
+                  <SpellCheck className="w-7 h-7 text-accent"/> Your Word Set:
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {generatedWords.map((word, index) => (
                     <WordCard key={index} word={word} />
                   ))}
                 </div>
-                <p className="mt-4 text-sm text-muted-foreground text-center">
-                  These words are generated by AI. Explore their meanings and usage!
+                
+                {generatedSentence && (
+                  <div className="mt-8">
+                    <h3 className="text-2xl font-semibold mb-3 text-center text-primary flex items-center justify-center gap-2">
+                      <FileText className="w-7 h-7 text-accent" /> Example Sentence:
+                    </h3>
+                    <Card className="shadow-md bg-secondary/20">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="text-lg text-foreground flex-grow">{generatedSentence}</p>
+                          <Button variant="ghost" size="icon" onClick={handlePlaySentenceAudio} aria-label="Play audio for sentence">
+                            <Volume2 className="w-6 h-6 text-muted-foreground hover:text-primary" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+                <p className="mt-6 text-sm text-muted-foreground text-center">
+                  Content generated by AI. Explore meanings and usage!
                 </p>
               </>
             )}
             {!isLoading && generatedWords.length === 0 && !error && (
                  <div className="text-center text-muted-foreground mt-8 py-6 border-2 border-dashed rounded-lg">
-                    <p className="text-lg">Ready to learn some new words?</p>
-                    <p>Select a language and field, then click "Generate Words".</p>
+                    <p className="text-lg">Ready to learn some new words and sentences?</p>
+                    <p>Select a language and field, then click "Generate Content".</p>
                  </div>
             )}
             </div>

@@ -1,3 +1,4 @@
+
 // @/app/actions.ts
 "use server";
 
@@ -11,6 +12,7 @@ const ActionInputSchema = z.object({
 
 export interface GenerateWordSetActionResult {
   words?: string[];
+  sentence?: string;
   error?: string;
 }
 
@@ -20,15 +22,22 @@ export async function handleGenerateWordSet(
   try {
     const validatedData = ActionInputSchema.parse(data);
     const result: GenerateWordSetOutput = await generateWordSet(validatedData);
-    if (result.words && result.words.length > 0) {
-      return { words: result.words };
+    if (result.words && result.words.length > 0 && result.sentence) {
+      return { words: result.words, sentence: result.sentence };
     }
-    return { error: "No words were generated. Please try again." };
+    if (result.words && result.words.length > 0 && !result.sentence) {
+        return { words: result.words, error: "Words were generated, but the sentence was missing." };
+    }
+    return { error: "No words or sentence were generated. Please try again." };
   } catch (e) {
     console.error("Error generating word set:", e);
     if (e instanceof z.ZodError) {
       return { error: e.errors.map(err => err.message).join(", ") };
     }
-    return { error: "An unexpected error occurred while generating words." };
+    let errorMessage = "An unexpected error occurred while generating words.";
+    if (e instanceof Error) {
+        errorMessage = e.message;
+    }
+    return { error: errorMessage };
   }
 }
