@@ -180,7 +180,7 @@ export default function DashboardClientPage() {
                       <Volume2 className="w-4 h-4 text-muted-foreground hover:text-primary" />
                     </Button>
                   </div>
-                </Dialog>
+                </div>
               )}
               <div className="flex items-center">
                 <span className="text-sm font-medium text-muted-foreground w-24">Date:</span>
@@ -198,4 +198,3 @@ export default function DashboardClientPage() {
     </div>
   );
 }
-
