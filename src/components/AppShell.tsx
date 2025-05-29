@@ -4,9 +4,9 @@
 import type React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { GraduationCap, LayoutDashboard, Menu, StepForward } from "lucide-react"; // Changed LeapForward to StepForward
+import { GraduationCap, LayoutDashboard, Menu, StepForward } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"; // MODIFIED: Added SheetHeader, SheetTitle
 import { cn } from "@/lib/utils";
 
 interface NavItemProps {
@@ -46,7 +46,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="flex h-full max-h-screen flex-col gap-2">
           <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
             <Link href="/" className="flex items-center gap-2 font-semibold text-primary">
-              <StepForward className="h-6 w-6" /> {/* Changed LeapForward to StepForward */}
+              <StepForward className="h-6 w-6" />
               <span>LinguaLeap</span>
             </Link>
           </div>
@@ -72,23 +72,29 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 <span className="sr-only">Toggle navigation menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="flex flex-col">
-              <nav className="grid gap-2 text-lg font-medium">
-                <Link
-                  href="#"
-                  className="flex items-center gap-2 text-lg font-semibold mb-4 text-primary"
-                >
-                  <StepForward className="h-6 w-6" /> {/* Changed LeapForward to StepForward */}
-                  <span>LinguaLeap</span>
-                </Link>
-                {navItems.map((item) => (
-                  <NavItem key={item.href} {...item} pathname={pathname} />
-                ))}
-              </nav>
+            <SheetContent side="left" className="flex flex-col p-0"> {/* Removed default padding */}
+              <SheetHeader className="border-b px-4 py-3"> {/* Custom padding for header section */}
+                <SheetTitle asChild>
+                  <Link
+                    href="/" // Changed from #
+                    className="flex items-center gap-2 text-lg font-semibold text-primary"
+                  >
+                    <StepForward className="h-6 w-6" />
+                    <span>LinguaLeap</span>
+                  </Link>
+                </SheetTitle>
+              </SheetHeader>
+              <div className="flex-1 overflow-y-auto"> {/* Added for scrollability */}
+                <nav className="grid gap-2 p-4 text-lg font-medium"> {/* Custom padding for nav section */}
+                  {navItems.map((item) => (
+                    <NavItem key={item.href} {...item} pathname={pathname} />
+                  ))}
+                </nav>
+              </div>
             </SheetContent>
           </Sheet>
            <div className="flex items-center gap-2 font-semibold text-primary md:hidden">
-             <StepForward className="h-6 w-6" /> {/* Changed LeapForward to StepForward */}
+             <StepForward className="h-6 w-6" />
              <span>LinguaLeap</span>
            </div>
         </header>
