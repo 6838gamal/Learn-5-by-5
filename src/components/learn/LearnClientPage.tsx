@@ -26,7 +26,7 @@ import { LANGUAGES, FIELDS } from "@/constants/data";
 import { handleGenerateWordSet, type GenerateWordSetActionResult } from "@/app/actions";
 import { addWordSet } from "@/lib/activityStore";
 import { useToast } from "@/hooks/use-toast";
-import { Wand2, AlertTriangle, Languages, Lightbulb, Volume2, FileText } from "lucide-react"; // Added Volume2, FileText
+import { Wand2, AlertTriangle, Languages, Lightbulb, Volume2, FileText, SpellCheck } from "lucide-react"; // Added Volume2, FileText, SpellCheck
 import WordCard from "./WordCard";
 
 const learnFormSchema = z.object({
@@ -253,3 +253,4 @@ export default function LearnClientPage() {
     </div>
   );
 }
+
