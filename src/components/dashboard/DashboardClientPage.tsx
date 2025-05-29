@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { getStats, type LearningStats, type WordSetRecord, getActivityData } from "@/lib/activityStore";
-import { BarChart, BookOpenText, Layers, ListChecks, Clock } from "lucide-react";
+import { BarChart, BookOpenText, Layers, ListChecks, Clock, Volume2, FileText } from "lucide-react"; // Added Volume2, FileText
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow } from 'date-fns';
 import StatCard from "./StatCard";
@@ -39,6 +39,12 @@ export default function DashboardClientPage() {
     setIsDetailDialogOpen(true);
   };
 
+  const handlePlaySentenceAudioInDialog = (sentence: string) => {
+    // Placeholder for future TTS functionality
+    console.log(`Playing audio for sentence: ${sentence}`);
+    alert(`Audio playback for the sentence is not yet implemented.`);
+  };
+
   if (!isClient) {
     return (
       <div className="container mx-auto py-8">
@@ -47,6 +53,7 @@ export default function DashboardClientPage() {
              <Card key={i} className="shadow-lg"><CardHeader><div className="h-6 bg-muted rounded w-1/2"></div></CardHeader><CardContent><div className="h-10 bg-muted rounded w-3/4"></div></CardContent></Card>
           ))}
         </div>
+         <Card className="mt-8 shadow-xl"><CardHeader><div className="h-8 bg-muted rounded w-1/3"></div></CardHeader><CardContent><div className="h-40 bg-muted rounded"></div></CardContent></Card>
       </div>
     );
   }
@@ -96,7 +103,7 @@ export default function DashboardClientPage() {
         </CardHeader>
         <CardContent>
           {recentActivity.length > 0 ? (
-            <ScrollArea className="h-[300px]">
+            <ScrollArea className="h-[300px] pr-3">
               <ul className="space-y-4">
                 {recentActivity.map((activity) => (
                   <li 
@@ -112,6 +119,9 @@ export default function DashboardClientPage() {
                       </span>
                     </div>
                     <p className="text-sm text-muted-foreground">Words: {activity.words.join(", ").substring(0, 50)}{activity.words.join(", ").length > 50 ? "..." : ""}</p>
+                     {activity.sentence && (
+                      <p className="text-sm text-muted-foreground mt-1 italic">Sentence: {activity.sentence.substring(0,50)}{activity.sentence.length > 50 ? "..." : ""}</p>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -136,16 +146,16 @@ export default function DashboardClientPage() {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="flex items-center">
-                <span className="text-sm font-medium text-muted-foreground w-20">Language:</span>
+                <span className="text-sm font-medium text-muted-foreground w-24">Language:</span>
                 <span className="text-sm text-foreground">{selectedActivity.language}</span>
               </div>
               <div className="flex items-center">
-                <span className="text-sm font-medium text-muted-foreground w-20">Field:</span>
+                <span className="text-sm font-medium text-muted-foreground w-24">Field:</span>
                 <span className="text-sm text-foreground">{selectedActivity.field}</span>
               </div>
               <div className="flex items-start">
-                <span className="text-sm font-medium text-muted-foreground w-20 mt-1">Words:</span>
-                <ScrollArea className="h-20 w-full rounded-md border p-2">
+                <span className="text-sm font-medium text-muted-foreground w-24 mt-1">Words:</span>
+                <ScrollArea className="h-24 w-full rounded-md border p-2">
                   <ul className="list-disc list-inside text-sm text-foreground">
                     {selectedActivity.words.map((word, index) => (
                       <li key={index}>{word}</li>
@@ -153,8 +163,27 @@ export default function DashboardClientPage() {
                   </ul>
                 </ScrollArea>
               </div>
+              {selectedActivity.sentence && (
+                <div className="flex items-start">
+                  <span className="text-sm font-medium text-muted-foreground w-24 mt-1 flex items-center gap-1">
+                    <FileText className="w-4 h-4"/> Sentence:
+                  </span>
+                  <div className="flex-grow flex items-start justify-between gap-2 border rounded-md p-2 bg-secondary/20">
+                    <p className="text-sm text-foreground ">{selectedActivity.sentence}</p>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-6 w-6 shrink-0"
+                      onClick={() => handlePlaySentenceAudioInDialog(selectedActivity.sentence)} 
+                      aria-label="Play audio for sentence"
+                    >
+                      <Volume2 className="w-4 h-4 text-muted-foreground hover:text-primary" />
+                    </Button>
+                  </div>
+                </Dialog>
+              )}
               <div className="flex items-center">
-                <span className="text-sm font-medium text-muted-foreground w-20">Date:</span>
+                <span className="text-sm font-medium text-muted-foreground w-24">Date:</span>
                 <span className="text-sm text-foreground">
                   {new Date(selectedActivity.timestamp).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
                 </span>
@@ -169,3 +198,4 @@ export default function DashboardClientPage() {
     </div>
   );
 }
+

@@ -1,3 +1,4 @@
+
 // Ensure this code only runs on the client-side
 "use client";
 
@@ -6,6 +7,7 @@ export interface WordSetRecord {
   language: string;
   field: string;
   words: string[];
+  sentence: string; // Added sentence field
   timestamp: number;
 }
 
@@ -15,10 +17,10 @@ export interface ActivityData {
 
 const STORAGE_KEY = "linguaLeapActivity";
 
-export function addWordSet(language: string, field: string, words: string[]): WordSetRecord {
+export function addWordSet(language: string, field: string, words: string[], sentence: string): WordSetRecord {
   if (typeof window === "undefined") {
     // Should not happen if called from client component effect
-    const placeholderRecord: WordSetRecord = { id: Date.now().toString(), language, field, words, timestamp: Date.now() };
+    const placeholderRecord: WordSetRecord = { id: Date.now().toString(), language, field, words, sentence, timestamp: Date.now() };
     return placeholderRecord;
   }
 
@@ -28,6 +30,7 @@ export function addWordSet(language: string, field: string, words: string[]): Wo
     language,
     field,
     words,
+    sentence, // Store the sentence
     timestamp: Date.now(),
   };
   activityData.learnedItems.unshift(newRecord); // Add to the beginning for chronological order
@@ -43,8 +46,13 @@ export function getActivityData(): ActivityData {
   if (data) {
     try {
       const parsedData = JSON.parse(data) as ActivityData;
-      // Ensure learnedItems is an array
+      // Ensure learnedItems is an array and optionally migrate old records
       if (Array.isArray(parsedData.learnedItems)) {
+        // Ensure all items have a sentence field, even if empty for older records
+        parsedData.learnedItems = parsedData.learnedItems.map(item => ({
+          ...item,
+          sentence: item.sentence || "", // Add empty sentence if missing
+        }));
         return parsedData;
       }
     } catch (error) {
@@ -79,3 +87,4 @@ export function getStats(): LearningStats {
     wordSetsGenerated: activityData.learnedItems.length,
   };
 }
+

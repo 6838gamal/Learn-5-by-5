@@ -26,7 +26,7 @@ import { LANGUAGES, FIELDS } from "@/constants/data";
 import { handleGenerateWordSet, type GenerateWordSetActionResult } from "@/app/actions";
 import { addWordSet } from "@/lib/activityStore";
 import { useToast } from "@/hooks/use-toast";
-import { Wand2, AlertTriangle, Languages, Lightbulb, Volume2, FileText, SpellCheck } from "lucide-react"; // Added Volume2, FileText, SpellCheck
+import { Wand2, AlertTriangle, Languages, Lightbulb, Volume2, FileText, SpellCheck } from "lucide-react";
 import WordCard from "./WordCard";
 
 const learnFormSchema = z.object({
@@ -62,7 +62,7 @@ export default function LearnClientPage() {
     if (result.words && result.sentence) {
       setGeneratedWords(result.words);
       setGeneratedSentence(result.sentence);
-      addWordSet(data.language, data.field, result.words); // Sentence is not stored in activityStore for now
+      addWordSet(data.language, data.field, result.words, result.sentence); // Store sentence
       toast({
         title: "Words & Sentence Generated!",
         description: `A new set for ${data.field} in ${data.language} is ready.`,
@@ -253,4 +253,3 @@ export default function LearnClientPage() {
     </div>
   );
 }
-
