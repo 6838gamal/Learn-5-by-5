@@ -26,7 +26,7 @@ import { LANGUAGES, FIELDS } from "@/constants/data";
 import { handleGenerateWordSet, type GenerateWordSetActionResult } from "@/app/actions";
 import { addWordSet } from "@/lib/activityStore";
 import { useToast } from "@/hooks/use-toast";
-import { Wand2, AlertTriangle, Languages, Lightbulb, Volume2, FileText, SpellCheck } from "lucide-react";
+import { Wand2, AlertTriangle, Languages, Lightbulb, Volume2, FileText, SpellCheck, BookOpenText } from "lucide-react";
 import WordCard from "./WordCard";
 
 const learnFormSchema = z.object({
@@ -96,11 +96,14 @@ export default function LearnClientPage() {
     <div className="container mx-auto py-8 px-4 md:px-0">
       <Card className="w-full max-w-2xl mx-auto shadow-xl">
         <CardHeader>
-          <CardTitle className="text-3xl font-bold text-center text-primary">
-            Discover New Words & Sentences
-          </CardTitle>
+          <div className="flex items-center justify-center mb-2">
+            <BookOpenText className="w-10 h-10 text-primary mr-3" />
+            <CardTitle className="text-3xl font-bold text-center text-primary">
+              Generate Word Sets
+            </CardTitle>
+          </div>
           <CardDescription className="text-center text-lg">
-            Select a language and field to generate 5 words and an example sentence.
+            Select a language and field to generate 5 topic-related words and an example sentence using them.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -182,7 +185,7 @@ export default function LearnClientPage() {
             </div>
           )}
           
-          {isClient && (
+          {isClient && ( // Ensure client-side rendering for localStorage dependent parts
             <div className="mt-8">
             {isLoading && (
               <div>
@@ -240,7 +243,7 @@ export default function LearnClientPage() {
                 </p>
               </>
             )}
-            {!isLoading && generatedWords.length === 0 && !error && (
+            {!isLoading && generatedWords.length === 0 && !error && ( // Initial state before any generation
                  <div className="text-center text-muted-foreground mt-8 py-6 border-2 border-dashed rounded-lg">
                     <p className="text-lg">Ready to learn some new words and sentences?</p>
                     <p>Select a language and field, then click "Generate Content".</p>

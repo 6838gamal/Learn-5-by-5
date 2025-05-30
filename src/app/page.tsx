@@ -1,5 +1,5 @@
-import LearnClientPage from "@/components/learn/LearnClientPage";
+import HomePageClient from "@/components/home/HomePageClient";
 
-export default function LearnPage() {
-  return <LearnClientPage />;
+export default function HomePage() {
+  return <HomePageClient />;
 }
