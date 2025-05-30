@@ -4,7 +4,18 @@
 import type React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { GraduationCap, LayoutDashboard, Menu, StepForward } from "lucide-react";
+import { 
+  Home, 
+  LayoutDashboard, 
+  Menu, 
+  StepForward, 
+  Mic, 
+  Type, 
+  ClipboardList, 
+  MessagesSquare, 
+  Award, 
+  Settings as SettingsIcon // Renamed to avoid conflict with Settings component if any
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -36,7 +47,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   const navItems = [
-    { href: "/", icon: GraduationCap, label: "Learn" },
+    { href: "/", icon: Home, label: "Home" },
+    { href: "/sounds", icon: Mic, label: "Sounds" },
+    { href: "/words", icon: Type, label: "Words" },
+    { href: "/exercises", icon: ClipboardList, label: "Exercises" },
+    { href: "/conversations", icon: MessagesSquare, label: "Conversations" },
+    { href: "/exams", icon: Award, label: "Exams" },
+    { href: "/settings", icon: SettingsIcon, label: "Settings" },
     { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   ];
 
