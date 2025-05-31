@@ -3,7 +3,7 @@
 
 import type React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { 
   Home, 
   LayoutDashboard, 
@@ -14,26 +14,55 @@ import {
   ClipboardList, 
   MessagesSquare, 
   Award, 
-  Settings as SettingsIcon // Renamed to avoid conflict with Settings component if any
+  Settings as SettingsIcon,
+  LogOut // Added LogOut icon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast"; // Added useToast
 
 interface NavItemProps {
-  href: string;
+  href?: string; // Made href optional
   icon: React.ElementType;
   label: string;
-  pathname: string;
+  pathname?: string; // pathname is only relevant for Links
+  onClick?: () => void; // Added onClick for actions
 }
 
-function NavItem({ href, icon: Icon, label, pathname }: NavItemProps) {
+function NavItem({ href, icon: Icon, label, pathname, onClick }: NavItemProps) {
+  const commonClasses = "flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-primary";
+  
+  if (onClick) {
+    return (
+      <button
+        onClick={onClick}
+        className={cn(
+          commonClasses,
+          "text-muted-foreground w-full text-left"
+          // font-medium and text-sm/text-lg are inherited from parent <nav>
+        )}
+      >
+        <Icon className="h-5 w-5" />
+        {label}
+      </button>
+    );
+  }
+
+  // Fallback for when onClick is not provided, href must be defined.
+  if (!href) {
+    // This case should ideally not be reached if navItems are structured correctly.
+    return null; 
+  }
+
   const isActive = pathname === href;
+
   return (
     <Link
       href={href}
       className={cn(
-        "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+        commonClasses,
+        "text-muted-foreground", // font-medium and text-sm/text-lg are inherited
         isActive && "bg-primary/10 text-primary"
       )}
     >
@@ -45,8 +74,24 @@ function NavItem({ href, icon: Icon, label, pathname }: NavItemProps) {
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter(); // Added router
+  const { toast } = useToast(); // Added toast
 
-  const navItems = [
+  const handleLogout = async () => {
+    // In a real app, call your auth provider's logout method here.
+    // For example: await firebase.auth().signOut();
+    // Or if using NextAuth.js: await signOut();
+    console.log("User logged out (simulated)");
+    
+    toast({
+      title: "Logged Out",
+      description: "You have been successfully logged out.",
+    });
+    
+    router.push('/auth/login'); // Redirect to login page
+  };
+
+  const navItems: NavItemProps[] = [
     { href: "/", icon: Home, label: "Home" },
     { href: "/sounds", icon: Mic, label: "Sounds" },
     { href: "/words", icon: Type, label: "Words" },
@@ -55,6 +100,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     { href: "/exams", icon: Award, label: "Exams" },
     { href: "/settings", icon: SettingsIcon, label: "Settings" },
     { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+    { label: "Logout", icon: LogOut, onClick: handleLogout }, // Added Logout item
   ];
 
   return (
@@ -70,7 +116,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex-1">
             <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
               {navItems.map((item) => (
-                <NavItem key={item.href} {...item} pathname={pathname} />
+                <NavItem key={item.label} {...item} pathname={pathname} />
               ))}
             </nav>
           </div>
@@ -104,7 +150,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <div className="flex-1 overflow-y-auto">
                 <nav className="grid gap-2 p-4 text-lg font-medium">
                   {navItems.map((item) => (
-                    <NavItem key={item.href} {...item} pathname={pathname} />
+                    <NavItem key={item.label} {...item} pathname={pathname} />
                   ))}
                 </nav>
               </div>
