@@ -91,6 +91,20 @@ export default function LearnClientPage() {
     alert(`Audio playback for the sentence is not yet implemented.`);
   };
 
+  let languageDisplayNode: React.ReactNode;
+  const selectedLanguageValue = form.watch("language");
+  if (selectedLanguageValue) {
+    const selectedLanguage = LANGUAGES.find((lang: SelectionOption) => lang.value === selectedLanguageValue);
+    languageDisplayNode = (
+      <div className="flex items-center gap-2">
+        {selectedLanguage?.emoji && <span className="text-xl">{selectedLanguage.emoji}</span>}
+        <span>{selectedLanguage ? selectedLanguage.label : "Choose a language..."}</span>
+      </div>
+    );
+  } else {
+    languageDisplayNode = <SelectValue placeholder="Choose a language..." />;
+  }
+
   return (
     <div className="container mx-auto py-8 px-4 md:px-0">
       <Card className="w-full max-w-2xl mx-auto shadow-xl">
@@ -111,21 +125,7 @@ export default function LearnClientPage() {
               <FormField
                 control={form.control}
                 name="language"
-                render={({ field }) => {
-                  let languageDisplayNode: React.ReactNode;
-                  if (field.value) {
-                    const selectedLanguage = LANGUAGES.find((lang: SelectionOption) => lang.value === field.value);
-                    languageDisplayNode = (
-                      <div className="flex items-center gap-2">
-                        {selectedLanguage?.emoji && <span className="text-xl">{selectedLanguage.emoji}</span>}
-                        <span>{selectedLanguage ? selectedLanguage.label : "Choose a language..."}</span>
-                      </div>
-                    );
-                  } else {
-                    languageDisplayNode = <SelectValue placeholder="Choose a language..." />;
-                  }
-
-                  return (
+                render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-base flex items-center gap-2"><Languages className="w-5 h-5 text-primary" /> Language</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value || ""} defaultValue={field.value}>
@@ -152,8 +152,7 @@ export default function LearnClientPage() {
                       </Select>
                       <FormMessage />
                     </FormItem>
-                  );
-                }}
+                  )}
               />
 
               <FormField
@@ -166,7 +165,7 @@ export default function LearnClientPage() {
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Choose a field..." />
-                        </Trigger>
+                        </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {FIELDS.map((fld) => (
