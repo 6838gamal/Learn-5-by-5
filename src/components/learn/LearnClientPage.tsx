@@ -205,7 +205,7 @@ export default function LearnClientPage() {
             </div>
           )}
           
-          {isClient && ( // Ensure client-side rendering for localStorage dependent parts
+          {isClient && (
             <div className="mt-8">
             {isLoading && (
               <div>
@@ -263,7 +263,7 @@ export default function LearnClientPage() {
                 </p>
               </>
             )}
-            {!isLoading && generatedWords.length === 0 && !error && ( // Initial state before any generation
+            {!isLoading && generatedWords.length === 0 && !error && ( 
                  <div className="text-center text-muted-foreground mt-8 py-6 border-2 border-dashed rounded-lg">
                     <p className="text-lg">Ready to learn some new words and sentences?</p>
                     <p>Select a language and field, then click "Generate Content".</p>
