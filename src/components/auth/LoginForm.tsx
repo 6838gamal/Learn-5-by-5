@@ -63,7 +63,7 @@ export default function LoginForm() {
         title: "Login Successful (Test Mode)", 
         description: `Welcome back, admin@gmail.com! You are logged in for testing.` 
       });
-      router.push('/dashboard'); // Redirect to dashboard
+      router.push('/words'); // Redirect to words page
       setIsLoading(false);
       return; // Skip Firebase logic
     }
@@ -83,7 +83,7 @@ export default function LoginForm() {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       toast({ title: "Login Successful", description: `Welcome back, ${userCredential.user.email}!` });
-      router.push('/dashboard'); // Redirect to dashboard
+      router.push('/words'); // Redirect to words page
     } catch (e: any) {
       let errorMessage = "Failed to log in. Please check your email and password.";
       if (e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
@@ -121,7 +121,7 @@ export default function LoginForm() {
         title: "Login Successful",
         description: `Welcome, ${user.displayName || user.email}!`,
       });
-      router.push('/dashboard'); // Redirect to dashboard
+      router.push('/words'); // Redirect to words page
     } catch (e: any) {
       console.error(`${providerName} login error:`, e);
       let errorMessage = "An unexpected error occurred during social login.";

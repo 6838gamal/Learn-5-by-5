@@ -71,7 +71,7 @@ export default function RegisterForm() {
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       await updateProfile(userCredential.user, { displayName: data.name });
       toast({ title: "Registration Successful", description: "Welcome! Your account has been created." });
-      router.push('/dashboard'); // Redirect to dashboard
+      router.push('/words'); // Redirect to words page
     } catch (e: any) {
       let errorMessage = "Failed to register. Please try again.";
       if (e.code === 'auth/email-already-in-use') {
@@ -111,7 +111,7 @@ export default function RegisterForm() {
         title: "Sign Up Successful",
         description: `Welcome, ${user.displayName || user.email}! Your account is ready.`,
       });
-      router.push('/dashboard'); // Redirect to dashboard
+      router.push('/words'); // Redirect to words page
     } catch (e: any) {
       console.error(`${providerName} signup error:`, e);
       let errorMessage = "An unexpected error occurred during social signup.";
