@@ -15,7 +15,14 @@ import { AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { auth } from '@/lib/firebase';
-import { GoogleAuthProvider, FacebookAuthProvider, signInWithPopup, type UserCredential } from 'firebase/auth';
+import { 
+  GoogleAuthProvider, 
+  FacebookAuthProvider, 
+  signInWithPopup, 
+  createUserWithEmailAndPassword,
+  updateProfile,
+  type UserCredential 
+} from 'firebase/auth';
 
 const registerFormSchema = z.object({
   name: z.string().min(1, "Name is required."),
@@ -48,22 +55,35 @@ export default function RegisterForm() {
   async function onSubmit(data: RegisterFormValues) {
     setIsLoading(true);
     setError(null);
-    // Placeholder for actual email/password registration logic using Firebase
-    console.log("Email/Password registration attempt:", data.name, data.email);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    // Example:
-    // try {
-    //   const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-    //   // await updateProfile(userCredential.user, { displayName: data.name });
-    //   toast({ title: "Registration Successful", description: "Welcome! Your account has been created." });
-    //   router.push('/');
-    // } catch (e: any) {
-    //   setError(e.message || "Failed to register.");
-    //   toast({ variant: "destructive", title: "Registration Failed", description: e.message });
-    // }
-    setError("Email/Password registration is not fully implemented yet. Please use social signup or contact support.");
-    toast({ variant: "destructive", title: "Registration Incomplete", description: "Email/Password signup not yet active."})
+
+    if (auth.app.options.apiKey === "YOUR_API_KEY_HERE") {
+        setError("Firebase is not configured. Please update src/lib/firebase.ts with your project credentials.");
+        toast({
+            variant: "destructive",
+            title: "Configuration Error",
+            description: "Firebase credentials are missing. Email/Password registration cannot proceed.",
+        });
+        setIsLoading(false);
+        return;
+    }
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      await updateProfile(userCredential.user, { displayName: data.name });
+      toast({ title: "Registration Successful", description: "Welcome! Your account has been created." });
+      router.push('/');
+    } catch (e: any) {
+      let errorMessage = "Failed to register. Please try again.";
+      if (e.code === 'auth/email-already-in-use') {
+        errorMessage = "This email address is already in use. Try logging in or using a different email.";
+      } else if (e.code === 'auth/weak-password') {
+        errorMessage = "The password is too weak. Please choose a stronger password.";
+      } else if (e.message) {
+        errorMessage = e.message;
+      }
+      setError(errorMessage);
+      toast({ variant: "destructive", title: "Registration Failed", description: errorMessage });
+    }
     setIsLoading(false);
   }
 
@@ -91,7 +111,7 @@ export default function RegisterForm() {
         title: "Sign Up Successful",
         description: `Welcome, ${user.displayName || user.email}! Your account is ready.`,
       });
-      router.push('/'); // Redirect to home page after successful signup
+      router.push('/'); 
     } catch (e: any) {
       console.error(`${providerName} signup error:`, e);
       let errorMessage = "An unexpected error occurred during social signup.";

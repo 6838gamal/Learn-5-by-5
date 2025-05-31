@@ -15,7 +15,13 @@ import { AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { auth } from '@/lib/firebase';
-import { GoogleAuthProvider, FacebookAuthProvider, signInWithPopup, type UserCredential } from 'firebase/auth';
+import { 
+  GoogleAuthProvider, 
+  FacebookAuthProvider, 
+  signInWithPopup, 
+  signInWithEmailAndPassword,
+  type UserCredential 
+} from 'firebase/auth';
 
 const loginFormSchema = z.object({
   email: z.string().email("Invalid email address.").min(1, "Email is required."),
@@ -41,21 +47,32 @@ export default function LoginForm() {
   async function onSubmit(data: LoginFormValues) {
     setIsLoading(true);
     setError(null);
-    // Placeholder for actual email/password login logic using Firebase
-    console.log("Email/Password login attempt:", data);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    // Example:
-    // try {
-    //   const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
-    //   toast({ title: "Login Successful", description: `Welcome back, ${userCredential.user.email}!` });
-    //   router.push('/');
-    // } catch (e: any) {
-    //   setError(e.message || "Failed to log in.");
-    //   toast({ variant: "destructive", title: "Login Failed", description: e.message });
-    // }
-    setError("Email/Password login is not fully implemented yet. Please use social login or contact support.");
-    toast({ variant: "destructive", title: "Login Incomplete", description: "Email/Password login not yet active."})
+
+    if (auth.app.options.apiKey === "YOUR_API_KEY_HERE") {
+        setError("Firebase is not configured. Please update src/lib/firebase.ts with your project credentials.");
+        toast({
+            variant: "destructive",
+            title: "Configuration Error",
+            description: "Firebase credentials are missing. Email/Password login cannot proceed.",
+        });
+        setIsLoading(false);
+        return;
+    }
+
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+      toast({ title: "Login Successful", description: `Welcome back, ${userCredential.user.email}!` });
+      router.push('/');
+    } catch (e: any) {
+      let errorMessage = "Failed to log in. Please check your email and password.";
+      if (e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
+        errorMessage = "Invalid email or password. Please try again.";
+      } else if (e.message) {
+        errorMessage = e.message;
+      }
+      setError(errorMessage);
+      toast({ variant: "destructive", title: "Login Failed", description: errorMessage });
+    }
     setIsLoading(false);
   }
 
@@ -64,7 +81,6 @@ export default function LoginForm() {
     setError(null);
     const provider = providerName === 'Google' ? new GoogleAuthProvider() : new FacebookAuthProvider();
 
-    // Ensure Firebase is configured before attempting social login
     if (auth.app.options.apiKey === "YOUR_API_KEY_HERE") {
         setError("Firebase is not configured. Please update src/lib/firebase.ts with your project credentials.");
         toast({
@@ -84,7 +100,7 @@ export default function LoginForm() {
         title: "Login Successful",
         description: `Welcome, ${user.displayName || user.email}!`,
       });
-      router.push('/'); // Redirect to home page after successful login
+      router.push('/'); 
     } catch (e: any) {
       console.error(`${providerName} login error:`, e);
       let errorMessage = "An unexpected error occurred during social login.";
