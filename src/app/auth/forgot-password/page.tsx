@@ -5,7 +5,7 @@ import { KeyRound } from "lucide-react";
 
 export default function ForgotPasswordPage() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+    // Removed the outer div that was centering, ConditionalAppShell will provide a basic layout for auth pages
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="items-center text-center">
           <KeyRound className="h-12 w-12 text-primary mb-3" />
@@ -18,6 +18,5 @@ export default function ForgotPasswordPage() {
           <ForgotPasswordForm />
         </CardContent>
       </Card>
-    </div>
   );
 }

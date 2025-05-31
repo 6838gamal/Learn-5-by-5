@@ -1,11 +1,11 @@
 
 import LoginForm from "@/components/auth/LoginForm";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { StepForward } from "lucide-react"; // Or your app logo icon
+import { StepForward } from "lucide-react"; 
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+    // Removed the outer div that was centering, ConditionalAppShell will provide a basic layout for auth pages
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="items-center text-center">
           <StepForward className="h-12 w-12 text-primary mb-3" />
@@ -16,6 +16,5 @@ export default function LoginPage() {
           <LoginForm />
         </CardContent>
       </Card>
-    </div>
   );
 }

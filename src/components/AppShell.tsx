@@ -15,19 +15,20 @@ import {
   MessagesSquare, 
   Award, 
   Settings as SettingsIcon,
-  LogOut // Added LogOut icon
+  LogOut
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast"; // Added useToast
+import { useToast } from "@/hooks/use-toast";
+import { auth } from '@/lib/firebase'; // Import Firebase auth instance
 
 interface NavItemProps {
-  href?: string; // Made href optional
+  href?: string;
   icon: React.ElementType;
   label: string;
-  pathname?: string; // pathname is only relevant for Links
-  onClick?: () => void; // Added onClick for actions
+  pathname?: string;
+  onClick?: () => void;
 }
 
 function NavItem({ href, icon: Icon, label, pathname, onClick }: NavItemProps) {
@@ -40,7 +41,6 @@ function NavItem({ href, icon: Icon, label, pathname, onClick }: NavItemProps) {
         className={cn(
           commonClasses,
           "text-muted-foreground w-full text-left"
-          // font-medium and text-sm/text-lg are inherited from parent <nav>
         )}
       >
         <Icon className="h-5 w-5" />
@@ -49,9 +49,7 @@ function NavItem({ href, icon: Icon, label, pathname, onClick }: NavItemProps) {
     );
   }
 
-  // Fallback for when onClick is not provided, href must be defined.
   if (!href) {
-    // This case should ideally not be reached if navItems are structured correctly.
     return null; 
   }
 
@@ -62,7 +60,7 @@ function NavItem({ href, icon: Icon, label, pathname, onClick }: NavItemProps) {
       href={href}
       className={cn(
         commonClasses,
-        "text-muted-foreground", // font-medium and text-sm/text-lg are inherited
+        "text-muted-foreground",
         isActive && "bg-primary/10 text-primary"
       )}
     >
@@ -74,21 +72,25 @@ function NavItem({ href, icon: Icon, label, pathname, onClick }: NavItemProps) {
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter(); // Added router
-  const { toast } = useToast(); // Added toast
+  const router = useRouter();
+  const { toast } = useToast();
 
   const handleLogout = async () => {
-    // In a real app, call your auth provider's logout method here.
-    // For example: await firebase.auth().signOut();
-    // Or if using NextAuth.js: await signOut();
-    console.log("User logged out (simulated)");
-    
-    toast({
-      title: "Logged Out",
-      description: "You have been successfully logged out.",
-    });
-    
-    router.push('/auth/login'); // Redirect to login page
+    try {
+      await auth.signOut(); // Actual Firebase sign out
+      toast({
+        title: "Logged Out",
+        description: "You have been successfully logged out.",
+      });
+      router.push('/auth/login'); 
+    } catch (error) {
+      console.error("Logout Error:", error);
+      toast({
+        variant: "destructive",
+        title: "Logout Failed",
+        description: "Could not log out. Please try again.",
+      });
+    }
   };
 
   const navItems: NavItemProps[] = [
@@ -100,7 +102,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     { href: "/exams", icon: Award, label: "Exams" },
     { href: "/settings", icon: SettingsIcon, label: "Settings" },
     { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-    { label: "Logout", icon: LogOut, onClick: handleLogout }, // Added Logout item
+    { label: "Logout", icon: LogOut, onClick: handleLogout },
   ];
 
   return (
