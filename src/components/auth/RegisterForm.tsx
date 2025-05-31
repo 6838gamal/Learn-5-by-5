@@ -7,12 +7,15 @@ import { z } from "zod";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Mail, Lock, User, Github, ChromeIcon } from "lucide-react"; // Using Github and Chrome as generic social icons
+import { Mail, Lock, User, Github, ChromeIcon } from "lucide-react";
 import { useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
+import { auth } from '@/lib/firebase';
+import { GoogleAuthProvider, FacebookAuthProvider, signInWithPopup, type UserCredential } from 'firebase/auth';
 
 const registerFormSchema = z.object({
   name: z.string().min(1, "Name is required."),
@@ -21,7 +24,7 @@ const registerFormSchema = z.object({
   confirmPassword: z.string().min(6, "Password must be at least 6 characters."),
 }).refine(data => data.password === data.confirmPassword, {
   message: "Passwords don't match",
-  path: ["confirmPassword"], // path of error
+  path: ["confirmPassword"],
 });
 
 type RegisterFormValues = z.infer<typeof registerFormSchema>;
@@ -29,6 +32,8 @@ type RegisterFormValues = z.infer<typeof registerFormSchema>;
 export default function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const { toast } = useToast();
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerFormSchema),
@@ -43,24 +48,71 @@ export default function RegisterForm() {
   async function onSubmit(data: RegisterFormValues) {
     setIsLoading(true);
     setError(null);
-    // Placeholder for actual registration logic
-    console.log("Registration data:", data);
+    // Placeholder for actual email/password registration logic using Firebase
+    console.log("Email/Password registration attempt:", data.name, data.email);
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
-    // Example error:
-    // setError("An account with this email already exists.");
-    // Example success (would typically redirect or auto-login):
-    // alert("Registration successful! Please check your email to verify your account (placeholder).");
+    // Example:
+    // try {
+    //   const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+    //   // await updateProfile(userCredential.user, { displayName: data.name });
+    //   toast({ title: "Registration Successful", description: "Welcome! Your account has been created." });
+    //   router.push('/');
+    // } catch (e: any) {
+    //   setError(e.message || "Failed to register.");
+    //   toast({ variant: "destructive", title: "Registration Failed", description: e.message });
+    // }
+    setError("Email/Password registration is not fully implemented yet. Please use social signup or contact support.");
+    toast({ variant: "destructive", title: "Registration Incomplete", description: "Email/Password signup not yet active."})
     setIsLoading(false);
   }
 
-  const handleSocialSignup = (provider: string) => {
+  const handleSocialSignup = async (providerName: 'Google' | 'Facebook') => {
     setIsLoading(true);
     setError(null);
-    console.log(`Attempting ${provider} signup...`);
-    // Placeholder for actual social signup logic
-    alert(`Social signup with ${provider} is not implemented yet.`);
-    setIsLoading(false);
+    const provider = providerName === 'Google' ? new GoogleAuthProvider() : new FacebookAuthProvider();
+
+    if (auth.app.options.apiKey === "YOUR_API_KEY_HERE") {
+        setError("Firebase is not configured. Please update src/lib/firebase.ts with your project credentials.");
+        toast({
+            variant: "destructive",
+            title: "Configuration Error",
+            description: "Firebase credentials are missing. Social signup cannot proceed.",
+        });
+        setIsLoading(false);
+        return;
+    }
+    
+    try {
+      const result: UserCredential = await signInWithPopup(auth, provider);
+      const user = result.user;
+      console.log(`${providerName} signup successful:`, user);
+      toast({
+        title: "Sign Up Successful",
+        description: `Welcome, ${user.displayName || user.email}! Your account is ready.`,
+      });
+      router.push('/'); // Redirect to home page after successful signup
+    } catch (e: any) {
+      console.error(`${providerName} signup error:`, e);
+      let errorMessage = "An unexpected error occurred during social signup.";
+       if (e.code === 'auth/account-exists-with-different-credential') {
+        errorMessage = "An account already exists with the same email. Try signing in with the original method.";
+      } else if (e.code === 'auth/popup-closed-by-user') {
+        errorMessage = "Signup cancelled. The sign-in popup was closed.";
+      } else if (e.code === 'auth/cancelled-popup-request') {
+        errorMessage = "Signup cancelled. Multiple popup requests were made.";
+      } else if (e.code) {
+        errorMessage = e.message;
+      }
+      setError(errorMessage);
+      toast({
+        variant: "destructive",
+        title: "Sign Up Failed",
+        description: errorMessage,
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

@@ -7,12 +7,15 @@ import { z } from "zod";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Mail, Lock, Github, ChromeIcon } from "lucide-react"; // Using Github and Chrome as generic social icons
+import { Mail, Lock, Github, ChromeIcon } from "lucide-react";
 import { useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
+import { auth } from '@/lib/firebase';
+import { GoogleAuthProvider, FacebookAuthProvider, signInWithPopup, type UserCredential } from 'firebase/auth';
 
 const loginFormSchema = z.object({
   email: z.string().email("Invalid email address.").min(1, "Email is required."),
@@ -24,6 +27,8 @@ type LoginFormValues = z.infer<typeof loginFormSchema>;
 export default function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const { toast } = useToast();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
@@ -36,24 +41,71 @@ export default function LoginForm() {
   async function onSubmit(data: LoginFormValues) {
     setIsLoading(true);
     setError(null);
-    // Placeholder for actual login logic
-    console.log("Login data:", data);
+    // Placeholder for actual email/password login logic using Firebase
+    console.log("Email/Password login attempt:", data);
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
-    // Example error:
-    // setError("Invalid email or password. Please try again.");
-    // Example success (would typically redirect):
-    // alert("Login successful (placeholder)");
+    // Example:
+    // try {
+    //   const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+    //   toast({ title: "Login Successful", description: `Welcome back, ${userCredential.user.email}!` });
+    //   router.push('/');
+    // } catch (e: any) {
+    //   setError(e.message || "Failed to log in.");
+    //   toast({ variant: "destructive", title: "Login Failed", description: e.message });
+    // }
+    setError("Email/Password login is not fully implemented yet. Please use social login or contact support.");
+    toast({ variant: "destructive", title: "Login Incomplete", description: "Email/Password login not yet active."})
     setIsLoading(false);
   }
 
-  const handleSocialLogin = (provider: string) => {
+  const handleSocialLogin = async (providerName: 'Google' | 'Facebook') => {
     setIsLoading(true);
     setError(null);
-    console.log(`Attempting ${provider} login...`);
-    // Placeholder for actual social login logic
-    alert(`Social login with ${provider} is not implemented yet.`);
-    setIsLoading(false);
+    const provider = providerName === 'Google' ? new GoogleAuthProvider() : new FacebookAuthProvider();
+
+    // Ensure Firebase is configured before attempting social login
+    if (auth.app.options.apiKey === "YOUR_API_KEY_HERE") {
+        setError("Firebase is not configured. Please update src/lib/firebase.ts with your project credentials.");
+        toast({
+            variant: "destructive",
+            title: "Configuration Error",
+            description: "Firebase credentials are missing. Social login cannot proceed.",
+        });
+        setIsLoading(false);
+        return;
+    }
+
+    try {
+      const result: UserCredential = await signInWithPopup(auth, provider);
+      const user = result.user;
+      console.log(`${providerName} login successful:`, user);
+      toast({
+        title: "Login Successful",
+        description: `Welcome, ${user.displayName || user.email}!`,
+      });
+      router.push('/'); // Redirect to home page after successful login
+    } catch (e: any) {
+      console.error(`${providerName} login error:`, e);
+      let errorMessage = "An unexpected error occurred during social login.";
+      if (e.code === 'auth/account-exists-with-different-credential') {
+        errorMessage = "An account already exists with the same email. Try signing in with the original method.";
+      } else if (e.code === 'auth/popup-closed-by-user') {
+        errorMessage = "Login cancelled. The sign-in popup was closed.";
+      } else if (e.code === 'auth/cancelled-popup-request') {
+        errorMessage = "Login cancelled. Multiple popup requests were made.";
+      } else if (e.code) {
+        errorMessage = e.message;
+      }
+      setError(errorMessage);
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: errorMessage,
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
