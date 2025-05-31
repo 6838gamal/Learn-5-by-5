@@ -39,8 +39,8 @@ export default function LoginForm() {
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
     defaultValues: {
-      email: "",
-      password: "",
+      email: "admin@gmail.com", // Pre-fill for convenience in test mode
+      password: "admingamal", // Pre-fill for convenience in test mode
     },
   });
 
@@ -48,6 +48,27 @@ export default function LoginForm() {
     setIsLoading(true);
     setError(null);
 
+    // --------------- TEST MODE FLAG ---------------
+    // Set to true to bypass Firebase email/password login and simulate success.
+    // Set to false for normal Firebase email/password login.
+    const IS_TEST_MODE = true; 
+    // --------------------------------------------
+
+    if (IS_TEST_MODE) {
+      console.log("TEST MODE ACTIVE: Simulating login for admin@gmail.com");
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 500)); 
+      
+      toast({ 
+        title: "Login Successful (Test Mode)", 
+        description: `Welcome back, admin@gmail.com! You are logged in for testing.` 
+      });
+      router.push('/');
+      setIsLoading(false);
+      return; // Skip Firebase logic
+    }
+
+    // Regular Firebase Email/Password Login Logic
     if (auth.app.options.apiKey === "YOUR_API_KEY_HERE") {
         setError("Firebase is not configured. Please update src/lib/firebase.ts with your project credentials.");
         toast({
