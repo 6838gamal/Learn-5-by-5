@@ -115,10 +115,22 @@ export default function LearnClientPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-base flex items-center gap-2"><Languages className="w-5 h-5 text-primary" /> Language</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || ""} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Choose a language..." />
+                          {field.value ? (
+                            (() => {
+                              const selectedLanguage = LANGUAGES.find(lang => lang.value === field.value);
+                              return (
+                                <div className="flex items-center gap-2">
+                                  {selectedLanguage?.emoji && <span className="text-xl">{selectedLanguage.emoji}</span>}
+                                  <span>{selectedLanguage ? selectedLanguage.label : "Choose a language..."}</span>
+                                </div>
+                              );
+                            })()
+                          ) : (
+                            <SelectValue placeholder="Choose a language..." />
+                          )}
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -152,7 +164,7 @@ export default function LearnClientPage() {
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Choose a field..." />
-                        </SelectTrigger>
+                        </Trigger>
                       </FormControl>
                       <SelectContent>
                         {FIELDS.map((fld) => (
