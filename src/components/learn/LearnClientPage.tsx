@@ -124,7 +124,15 @@ export default function LearnClientPage() {
                       <SelectContent>
                         {LANGUAGES.map((lang) => (
                           <SelectItem key={lang.value} value={lang.value}>
-                            {lang.label}
+                            <div className="flex items-center gap-3 py-1">
+                              <span className="text-xl">{lang.emoji}</span>
+                              <div>
+                                <span className="font-medium">{lang.label}</span>
+                                {lang.description && (
+                                  <p className="text-xs text-muted-foreground">{lang.description}</p>
+                                )}
+                              </div>
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>

@@ -1,18 +1,21 @@
+
 export interface SelectionOption {
   value: string;
   label: string;
+  description?: string;
+  emoji?: string;
 }
 
 export const LANGUAGES: SelectionOption[] = [
-  { value: "English", label: "English" },
-  { value: "Spanish", label: "Spanish" },
-  { value: "French", label: "French" },
-  { value: "German", label: "German" },
-  { value: "Italian", label: "Italian" },
-  { value: "Portuguese", label: "Portuguese" },
-  { value: "Japanese", label: "Japanese" },
-  { value: "Korean", label: "Korean" },
-  { value: "Mandarin Chinese", label: "Mandarin Chinese" },
+  { value: "English", label: "English", description: "The global lingua franca.", emoji: "🇬🇧" },
+  { value: "Spanish", label: "Spanish", description: "Spoken in Spain and most of Latin America.", emoji: "🇪🇸" },
+  { value: "French", label: "French", description: "Official language in 29 countries.", emoji: "🇫🇷" },
+  { value: "German", label: "German", description: "Most spoken native language in the EU.", emoji: "🇩🇪" },
+  { value: "Italian", label: "Italian", description: "Language of art, music, and cuisine.", emoji: "🇮🇹" },
+  { value: "Portuguese", label: "Portuguese", description: "Spoken in Portugal and Brazil.", emoji: "🇵🇹" },
+  { value: "Japanese", label: "Japanese", description: "East Asian language from Japan.", emoji: "🇯🇵" },
+  { value: "Korean", label: "Korean", description: "Official language of North & South Korea.", emoji: "🇰🇷" },
+  { value: "Mandarin Chinese", label: "Mandarin Chinese", description: "Most spoken language by native speakers.", emoji: "🇨🇳" },
 ];
 
 export const FIELDS: SelectionOption[] = [
