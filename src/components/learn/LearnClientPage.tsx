@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LANGUAGES, FIELDS } from "@/constants/data";
+import { LANGUAGES, FIELDS, type SelectionOption } from "@/constants/data";
 import { handleGenerateWordSet, type GenerateWordSetActionResult } from "@/app/actions";
 import { addWordSet } from "@/lib/activityStore";
 import { useToast } from "@/hooks/use-toast";
@@ -62,7 +62,7 @@ export default function LearnClientPage() {
     if (result.words && result.sentence) {
       setGeneratedWords(result.words);
       setGeneratedSentence(result.sentence);
-      addWordSet(data.language, data.field, result.words, result.sentence); // Store sentence
+      addWordSet(data.language, data.field, result.words, result.sentence);
       toast({
         title: "Words & Sentence Generated!",
         description: `A new set for ${data.field} in ${data.language} is ready.`,
@@ -74,7 +74,7 @@ export default function LearnClientPage() {
         title: "Generation Failed",
         description: result.error,
       });
-       if(result.words && result.words.length > 0) { // Still show words if sentence failed
+       if(result.words && result.words.length > 0) {
         setGeneratedWords(result.words);
       }
     }
@@ -87,7 +87,6 @@ export default function LearnClientPage() {
   }, []);
 
   const handlePlaySentenceAudio = () => {
-    // Placeholder for future TTS functionality
     console.log(`Playing audio for sentence: ${generatedSentence}`);
     alert(`Audio playback for the sentence is not yet implemented.`);
   };
@@ -112,46 +111,49 @@ export default function LearnClientPage() {
               <FormField
                 control={form.control}
                 name="language"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-base flex items-center gap-2"><Languages className="w-5 h-5 text-primary" /> Language</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          {field.value ? (
-                            (() => {
-                              const selectedLanguage = LANGUAGES.find(lang => lang.value === field.value);
-                              return (
-                                <div className="flex items-center gap-2">
-                                  {selectedLanguage?.emoji && <span className="text-xl">{selectedLanguage.emoji}</span>}
-                                  <span>{selectedLanguage ? selectedLanguage.label : "Choose a language..."}</span>
+                render={({ field }) => {
+                  let languageDisplayNode: React.ReactNode;
+                  if (field.value) {
+                    const selectedLanguage = LANGUAGES.find((lang: SelectionOption) => lang.value === field.value);
+                    languageDisplayNode = (
+                      <div className="flex items-center gap-2">
+                        {selectedLanguage?.emoji && <span className="text-xl">{selectedLanguage.emoji}</span>}
+                        <span>{selectedLanguage ? selectedLanguage.label : "Choose a language..."}</span>
+                      </div>
+                    );
+                  } else {
+                    languageDisplayNode = <SelectValue placeholder="Choose a language..." />;
+                  }
+
+                  return (
+                    <FormItem>
+                      <FormLabel className="text-base flex items-center gap-2"><Languages className="w-5 h-5 text-primary" /> Language</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ""} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            {languageDisplayNode}
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {LANGUAGES.map((lang) => (
+                            <SelectItem key={lang.value} value={lang.value}>
+                              <div className="flex items-center gap-3 py-1">
+                                <span className="text-xl">{lang.emoji}</span>
+                                <div>
+                                  <span className="font-medium">{lang.label}</span>
+                                  {lang.description && (
+                                    <p className="text-xs text-muted-foreground">{lang.description}</p>
+                                  )}
                                 </div>
-                              );
-                            })()
-                          ) : (
-                            <SelectValue placeholder="Choose a language..." />
-                          )}
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {LANGUAGES.map((lang) => (
-                          <SelectItem key={lang.value} value={lang.value}>
-                            <div className="flex items-center gap-3 py-1">
-                              <span className="text-xl">{lang.emoji}</span>
-                              <div>
-                                <span className="font-medium">{lang.label}</span>
-                                {lang.description && (
-                                  <p className="text-xs text-muted-foreground">{lang.description}</p>
-                                )}
                               </div>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
 
               <FormField
