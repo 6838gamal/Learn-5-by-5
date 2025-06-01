@@ -3,8 +3,15 @@
 
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { getStats, type LearningStats, type WordSetRecord, getActivityData } from "@/lib/activityStore";
-import { BarChart, BookOpenText, Layers, ListChecks, Clock, Volume2, FileText } from "lucide-react"; // Added Volume2, FileText
+import { 
+  getStats, 
+  type LearningStats, 
+  type ActivityRecord, 
+  type WordSetActivityRecord,
+  type ConversationActivityRecord,
+  getActivityData 
+} from "@/lib/activityStore";
+import { BarChart, BookOpenText, Layers, ListChecks, Clock, Volume2, FileText, MessageSquare } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow } from 'date-fns';
 import StatCard from "./StatCard";
@@ -20,9 +27,9 @@ import { Button } from "@/components/ui/button";
 
 export default function DashboardClientPage() {
   const [stats, setStats] = useState<LearningStats | null>(null);
-  const [recentActivity, setRecentActivity] = useState<WordSetRecord[]>([]);
+  const [recentActivity, setRecentActivity] = useState<ActivityRecord[]>([]);
   const [isClient, setIsClient] = useState(false);
-  const [selectedActivity, setSelectedActivity] = useState<WordSetRecord | null>(null);
+  const [selectedActivity, setSelectedActivity] = useState<ActivityRecord | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -34,13 +41,12 @@ export default function DashboardClientPage() {
     }
   }, []);
 
-  const handleActivityClick = (activity: WordSetRecord) => {
+  const handleActivityClick = (activity: ActivityRecord) => {
     setSelectedActivity(activity);
     setIsDetailDialogOpen(true);
   };
 
   const handlePlaySentenceAudioInDialog = (sentence: string) => {
-    // Placeholder for future TTS functionality
     console.log(`Playing audio for sentence: ${sentence}`);
     alert(`Audio playback for the sentence is not yet implemented.`);
   };
@@ -65,6 +71,158 @@ export default function DashboardClientPage() {
       </div>
     );
   }
+  
+  const renderActivityItem = (activity: ActivityRecord) => {
+    if (activity.type === 'wordSet') {
+      const wordSet = activity as WordSetActivityRecord;
+      return (
+        <>
+          <div className="flex justify-between items-center mb-1">
+            <h4 className="font-semibold text-md text-primary-foreground bg-primary px-2 py-1 rounded-md inline-block flex items-center gap-1">
+              <Layers className="w-4 h-4" /> {wordSet.language} - {wordSet.field}
+            </h4>
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              {formatDistanceToNow(new Date(wordSet.timestamp), { addSuffix: true })}
+            </span>
+          </div>
+          <p className="text-sm text-muted-foreground">Words: {wordSet.words.join(", ").substring(0, 50)}{wordSet.words.join(", ").length > 50 ? "..." : ""}</p>
+          {wordSet.sentence && (
+            <p className="text-sm text-muted-foreground mt-1 italic">Sentence: {wordSet.sentence.substring(0,50)}{wordSet.sentence.length > 50 ? "..." : ""}</p>
+          )}
+        </>
+      );
+    } else if (activity.type === 'conversation') {
+      const conv = activity as ConversationActivityRecord;
+      return (
+        <>
+          <div className="flex justify-between items-center mb-1">
+             <h4 className="font-semibold text-md text-primary-foreground bg-primary px-2 py-1 rounded-md inline-block flex items-center gap-1">
+              <MessageSquare className="w-4 h-4" /> Conversation in {conv.language}
+            </h4>
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              {formatDistanceToNow(new Date(conv.timestamp), { addSuffix: true })}
+            </span>
+          </div>
+          <p className="text-sm text-muted-foreground">Using words: {conv.selectedWords.join(", ").substring(0, 40)}{conv.selectedWords.join(", ").length > 40 ? "..." : ""}</p>
+          <p className="text-sm text-muted-foreground mt-1 italic">Script: {conv.conversation.substring(0,50)}{conv.conversation.length > 50 ? "..." : ""}</p>
+        </>
+      );
+    }
+    return null;
+  };
+
+  const renderDialogContent = () => {
+    if (!selectedActivity) return null;
+
+    if (selectedActivity.type === 'wordSet') {
+      const wordSet = selectedActivity as WordSetActivityRecord;
+      return (
+        <>
+          <DialogHeader>
+            <DialogTitle className="text-primary flex items-center gap-2">
+              <Layers className="w-5 h-5 text-accent" />
+              Word Set Details
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Session on <span className="font-semibold text-foreground">{wordSet.field}</span> in <span className="font-semibold text-foreground">{wordSet.language}</span>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="flex items-center">
+              <span className="text-sm font-medium text-muted-foreground w-24">Language:</span>
+              <span className="text-sm text-foreground">{wordSet.language}</span>
+            </div>
+            <div className="flex items-center">
+              <span className="text-sm font-medium text-muted-foreground w-24">Field:</span>
+              <span className="text-sm text-foreground">{wordSet.field}</span>
+            </div>
+            <div className="flex items-start">
+              <span className="text-sm font-medium text-muted-foreground w-24 mt-1">Words:</span>
+              <ScrollArea className="h-24 w-full rounded-md border p-2">
+                <ul className="list-disc list-inside text-sm text-foreground">
+                  {wordSet.words.map((word, index) => (
+                    <li key={index}>{word}</li>
+                  ))}
+                </ul>
+              </ScrollArea>
+            </div>
+            {wordSet.sentence && (
+              <div className="flex items-start">
+                <span className="text-sm font-medium text-muted-foreground w-24 mt-1 flex items-center gap-1">
+                  <FileText className="w-4 h-4"/> Sentence:
+                </span>
+                <div className="flex-grow flex items-start justify-between gap-2 border rounded-md p-2 bg-secondary/20">
+                  <p className="text-sm text-foreground ">{wordSet.sentence}</p>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6 shrink-0"
+                    onClick={() => handlePlaySentenceAudioInDialog(wordSet.sentence)} 
+                    aria-label="Play audio for sentence"
+                  >
+                    <Volume2 className="w-4 h-4 text-muted-foreground hover:text-primary" />
+                  </Button>
+                </div>
+              </div>
+            )}
+            <div className="flex items-center">
+              <span className="text-sm font-medium text-muted-foreground w-24">Date:</span>
+              <span className="text-sm text-foreground">
+                {new Date(wordSet.timestamp).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+              </span>
+            </div>
+          </div>
+        </>
+      );
+    } else if (selectedActivity.type === 'conversation') {
+      const conv = selectedActivity as ConversationActivityRecord;
+      return (
+        <>
+          <DialogHeader>
+            <DialogTitle className="text-primary flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-accent" />
+              Conversation Details
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Conversation practice in <span className="font-semibold text-foreground">{conv.language}</span>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="flex items-center">
+              <span className="text-sm font-medium text-muted-foreground w-32">Language:</span>
+              <span className="text-sm text-foreground">{conv.language}</span>
+            </div>
+             <div className="flex items-start">
+              <span className="text-sm font-medium text-muted-foreground w-32 mt-1">Words Used:</span>
+              <ScrollArea className="h-20 w-full rounded-md border p-2">
+                <ul className="list-disc list-inside text-sm text-foreground">
+                  {conv.selectedWords.map((word, index) => (
+                    <li key={index}>{word}</li>
+                  ))}
+                </ul>
+              </ScrollArea>
+            </div>
+            <div className="flex items-start">
+              <span className="text-sm font-medium text-muted-foreground w-32 mt-1">Conversation:</span>
+              <ScrollArea className="h-32 w-full rounded-md border p-2">
+                <p className="text-sm text-foreground whitespace-pre-line">{conv.conversation}</p>
+              </ScrollArea>
+            </div>
+            <div className="flex items-center">
+              <span className="text-sm font-medium text-muted-foreground w-32">Date:</span>
+              <span className="text-sm text-foreground">
+                {new Date(conv.timestamp).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+              </span>
+            </div>
+          </div>
+        </>
+      );
+    }
+    return null;
+  };
+
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-0">
@@ -75,19 +233,19 @@ export default function DashboardClientPage() {
           title="Total Words Learned"
           value={stats.totalWordsLearned.toString()}
           icon={ListChecks}
-          description="Number of unique words across all generated sets."
+          description="Unique words from generated word sets."
         />
         <StatCard
           title="Fields Explored"
           value={stats.fieldsCoveredCount.toString()}
           icon={BookOpenText}
-          description="Different language & field combinations you've studied."
+          description="Language & field combinations for word sets."
         />
         <StatCard
           title="Word Sets Generated"
           value={stats.wordSetsGenerated.toString()}
           icon={Layers}
-          description="Total learning sessions initiated."
+          description="Total word learning sessions initiated."
         />
       </div>
 
@@ -111,17 +269,7 @@ export default function DashboardClientPage() {
                     className="p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
                     onClick={() => handleActivityClick(activity)}
                   >
-                    <div className="flex justify-between items-center mb-1">
-                      <h4 className="font-semibold text-md text-primary-foreground bg-primary px-2 py-1 rounded-md inline-block">{activity.language} - {activity.field}</h4>
-                       <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
-                      </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">Words: {activity.words.join(", ").substring(0, 50)}{activity.words.join(", ").length > 50 ? "..." : ""}</p>
-                     {activity.sentence && (
-                      <p className="text-sm text-muted-foreground mt-1 italic">Sentence: {activity.sentence.substring(0,50)}{activity.sentence.length > 50 ? "..." : ""}</p>
-                    )}
+                    {renderActivityItem(activity)}
                   </li>
                 ))}
               </ul>
@@ -135,60 +283,7 @@ export default function DashboardClientPage() {
       {selectedActivity && (
         <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
           <DialogContent className="sm:max-w-md bg-card">
-            <DialogHeader>
-              <DialogTitle className="text-primary flex items-center gap-2">
-                <Layers className="w-5 h-5 text-accent" />
-                Activity Details
-              </DialogTitle>
-              <DialogDescription className="text-muted-foreground">
-                Session on <span className="font-semibold text-foreground">{selectedActivity.field}</span> in <span className="font-semibold text-foreground">{selectedActivity.language}</span>.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="flex items-center">
-                <span className="text-sm font-medium text-muted-foreground w-24">Language:</span>
-                <span className="text-sm text-foreground">{selectedActivity.language}</span>
-              </div>
-              <div className="flex items-center">
-                <span className="text-sm font-medium text-muted-foreground w-24">Field:</span>
-                <span className="text-sm text-foreground">{selectedActivity.field}</span>
-              </div>
-              <div className="flex items-start">
-                <span className="text-sm font-medium text-muted-foreground w-24 mt-1">Words:</span>
-                <ScrollArea className="h-24 w-full rounded-md border p-2">
-                  <ul className="list-disc list-inside text-sm text-foreground">
-                    {selectedActivity.words.map((word, index) => (
-                      <li key={index}>{word}</li>
-                    ))}
-                  </ul>
-                </ScrollArea>
-              </div>
-              {selectedActivity.sentence && (
-                <div className="flex items-start">
-                  <span className="text-sm font-medium text-muted-foreground w-24 mt-1 flex items-center gap-1">
-                    <FileText className="w-4 h-4"/> Sentence:
-                  </span>
-                  <div className="flex-grow flex items-start justify-between gap-2 border rounded-md p-2 bg-secondary/20">
-                    <p className="text-sm text-foreground ">{selectedActivity.sentence}</p>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-6 w-6 shrink-0"
-                      onClick={() => handlePlaySentenceAudioInDialog(selectedActivity.sentence)} 
-                      aria-label="Play audio for sentence"
-                    >
-                      <Volume2 className="w-4 h-4 text-muted-foreground hover:text-primary" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-              <div className="flex items-center">
-                <span className="text-sm font-medium text-muted-foreground w-24">Date:</span>
-                <span className="text-sm text-foreground">
-                  {new Date(selectedActivity.timestamp).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
-                </span>
-              </div>
-            </div>
+            {renderDialogContent()}
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>Close</Button>
             </DialogFooter>

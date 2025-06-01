@@ -3,8 +3,9 @@
 "use server";
 
 import { generateWordSet, type GenerateWordSetInput, type GenerateWordSetOutput } from "@/ai/flows/generate-word-set";
-import { generateConversation, type GenerateConversationInput, type GenerateConversationOutput } from "@/ai/flows/generate-conversation-flow"; // Removed GenerateConversationInputSchema import
+import { generateConversation, type GenerateConversationInput, type GenerateConversationOutput } from "@/ai/flows/generate-conversation-flow";
 import { z } from "zod";
+import { addWordSetActivity, addConversationActivity } from "@/lib/activityStore";
 
 const WordSetActionInputSchema = z.object({
   language: z.string().min(1, "Language is required."),
@@ -24,9 +25,12 @@ export async function handleGenerateWordSet(
     const validatedData = WordSetActionInputSchema.parse(data);
     const result: GenerateWordSetOutput = await generateWordSet(validatedData);
     if (result.words && result.words.length > 0 && result.sentence) {
+      addWordSetActivity(validatedData.language, validatedData.field, result.words, result.sentence);
       return { words: result.words, sentence: result.sentence };
     }
     if (result.words && result.words.length > 0 && !result.sentence) {
+        // Still add words if sentence generation failed but words were generated
+        addWordSetActivity(validatedData.language, validatedData.field, result.words, ""); 
         return { words: result.words, error: "Words were generated, but the sentence was missing." };
     }
     return { error: "No words or sentence were generated. Please try again." };
@@ -43,7 +47,6 @@ export async function handleGenerateWordSet(
   }
 }
 
-// Define the input schema for the conversation action locally
 const ConversationActionInputSchema = z.object({
   language: z.string().describe('The language for the conversation.'),
   selectedWords: z.array(z.string()).min(2, "Please select at least two words.").describe('A list of words to include in the conversation.'),
@@ -56,13 +59,13 @@ export interface GenerateConversationActionResult {
 }
 
 export async function handleGenerateConversation(
-  data: GenerateConversationInput // Still use the type from the flow for type safety when calling generateConversation
+  data: GenerateConversationInput
 ): Promise<GenerateConversationActionResult> {
   try {
-    // Validate input against the locally defined schema
     const validatedData = ConversationActionInputSchema.parse(data);
     const result: GenerateConversationOutput = await generateConversation(validatedData);
     if (result.conversation) {
+      addConversationActivity(validatedData.language, validatedData.selectedWords, result.conversation);
       return { conversation: result.conversation };
     }
     return { error: "No conversation was generated. Please try again." };
