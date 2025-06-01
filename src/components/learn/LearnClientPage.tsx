@@ -26,9 +26,16 @@ import { LANGUAGES, FIELDS, type SelectionOption } from "@/constants/data";
 import { handleGenerateWordSet, type GenerateWordSetActionResult } from "@/app/actions";
 import { addWordSet } from "@/lib/activityStore";
 import { useToast } from "@/hooks/use-toast";
-import { Wand2, AlertTriangle, Languages, Lightbulb, Volume2, FileText, SpellCheck, BookOpenText, Home } from "lucide-react";
-import WordCard from "./WordCard";
-import { useRouter } from "next/navigation"; // Added useRouter
+import { Wand2, AlertTriangle, Languages, Lightbulb, Volume2, FileText, SpellCheck, BookOpenText, Home, ChevronLeft, ChevronRight } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+  type CarouselApi,
+} from "@/components/ui/carousel";
 
 const learnFormSchema = z.object({
   language: z.string().min(1, "Please select a language."),
@@ -43,7 +50,47 @@ export default function LearnClientPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-  const router = useRouter(); // Initialized useRouter
+  const router = useRouter();
+
+  const [isClient, setIsClient] = useState(false);
+  const [carouselApi, setCarouselApi] = React.useState<CarouselApi>()
+  const [currentCarouselIndex, setCurrentCarouselIndex] = React.useState(0)
+  const [selectedWordDetail, setSelectedWordDetail] = useState<string | null>(null);
+  const [splitWordView, setSplitWordView] = useState<string[]>([]);
+
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (!carouselApi) {
+      return
+    }
+
+    setCurrentCarouselIndex(carouselApi.selectedScrollSnap())
+
+    carouselApi.on("select", () => {
+      setCurrentCarouselIndex(carouselApi.selectedScrollSnap())
+    })
+  }, [carouselApi])
+
+  useEffect(() => {
+    if (generatedWords.length > 0) {
+      setSelectedWordDetail(generatedWords[currentCarouselIndex]);
+    } else {
+      setSelectedWordDetail(null);
+    }
+  }, [currentCarouselIndex, generatedWords]);
+
+  useEffect(() => {
+    if (selectedWordDetail) {
+      setSplitWordView(selectedWordDetail.split(""));
+    } else {
+      setSplitWordView([]);
+    }
+  }, [selectedWordDetail]);
+
 
   const form = useForm<LearnFormValues>({
     resolver: zodResolver(learnFormSchema),
@@ -58,12 +105,18 @@ export default function LearnClientPage() {
     setError(null);
     setGeneratedWords([]);
     setGeneratedSentence("");
+    setSelectedWordDetail(null);
+    setSplitWordView([]);
+    setCurrentCarouselIndex(0); // Reset carousel index
 
     const result: GenerateWordSetActionResult = await handleGenerateWordSet(data);
 
     if (result.words && result.sentence) {
       setGeneratedWords(result.words);
       setGeneratedSentence(result.sentence);
+      if (result.words.length > 0) {
+        setSelectedWordDetail(result.words[0]); // Select the first word initially
+      }
       addWordSet(data.language, data.field, result.words, result.sentence);
       toast({
         title: "Words & Sentence Generated!",
@@ -78,15 +131,17 @@ export default function LearnClientPage() {
       });
        if(result.words && result.words.length > 0) {
         setGeneratedWords(result.words);
+         setSelectedWordDetail(result.words[0]); // Select the first word even if sentence fails
       }
     }
     setIsLoading(false);
   }
   
-  const [isClient, setIsClient] = useState(false);
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
+  const handlePlayWordAudio = (word: string | null) => {
+    if (!word) return;
+    console.log(`Playing audio for word: ${word}`);
+    alert(`Audio playback for "${word}" is not yet implemented.`);
+  };
 
   const handlePlaySentenceAudio = () => {
     console.log(`Playing audio for sentence: ${generatedSentence}`);
@@ -99,7 +154,7 @@ export default function LearnClientPage() {
 
   let languageDisplayNode: React.ReactNode;
   const selectedLanguageValue = form.watch("language");
-  if (isClient && selectedLanguageValue) { // ensure isClient before accessing form.watch value that might depend on localStorage/client state
+  if (isClient && selectedLanguageValue) {
     const selectedLanguage = LANGUAGES.find((lang: SelectionOption) => lang.value === selectedLanguageValue);
     languageDisplayNode = (
       <div className="flex items-center gap-2">
@@ -217,19 +272,9 @@ export default function LearnClientPage() {
             <div className="mt-8">
             {isLoading && (
               <div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Card key={i} className="shadow-sm">
-                      <CardHeader>
-                        <Skeleton className="h-6 w-3/4" />
-                      </CardHeader>
-                      <CardContent>
-                        <Skeleton className="h-4 w-full mb-2" />
-                        <Skeleton className="h-4 w-5/6" />
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                <Skeleton className="h-24 w-full mb-4" /> {/* Placeholder for carousel */}
+                <Skeleton className="h-12 w-1/2 mx-auto mb-2" /> {/* Placeholder for selected word */}
+                <Skeleton className="h-8 w-3/4 mx-auto mb-4" /> {/* Placeholder for split word */}
                 <div className="mt-6">
                   <Skeleton className="h-8 w-1/3 mb-2" />
                   <Skeleton className="h-10 w-full" />
@@ -242,11 +287,55 @@ export default function LearnClientPage() {
                 <h3 className="text-2xl font-semibold mb-4 text-center text-primary flex items-center justify-center gap-2">
                   <SpellCheck className="w-7 h-7 text-accent"/> Your Word Set:
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {generatedWords.map((word, index) => (
-                    <WordCard key={index} word={word} />
-                  ))}
-                </div>
+                <Carousel setApi={setCarouselApi} className="w-full max-w-xs sm:max-w-sm md:max-w-md mx-auto mb-6">
+                  <CarouselContent>
+                    {generatedWords.map((word, index) => (
+                      <CarouselItem key={index}>
+                        <Card className="shadow-md bg-gradient-to-br from-background to-secondary/30">
+                          <CardContent className="flex aspect-square items-center justify-center p-6">
+                            <span className="text-3xl font-semibold text-primary">{word}</span>
+                          </CardContent>
+                        </Card>
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                  <CarouselPrevious />
+                  <CarouselNext />
+                </Carousel>
+                
+                {selectedWordDetail && (
+                  <Card className="mt-4 mb-6 shadow-lg p-4">
+                    <CardHeader className="p-2 pb-0 text-center">
+                        <CardTitle className="text-4xl font-bold text-primary break-all">{selectedWordDetail}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-2">
+                        <div className="flex justify-center items-center my-3 space-x-1">
+                        {splitWordView.map((letter, index) => (
+                            <span 
+                            key={index} 
+                            className="flex items-center justify-center w-8 h-10 sm:w-10 sm:h-12 bg-muted text-foreground border border-border rounded-md text-lg sm:text-xl font-medium shadow-sm"
+                            >
+                            {letter}
+                            </span>
+                        ))}
+                        </div>
+                        <div className="text-center">
+                            <Button 
+                                variant="ghost" 
+                                size="lg" 
+                                onClick={() => handlePlayWordAudio(selectedWordDetail)}
+                                aria-label={`Play audio for ${selectedWordDetail}`}
+                                className="text-muted-foreground hover:text-primary"
+                            >
+                                <Volume2 className="w-7 h-7 mr-2" /> Listen
+                            </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground text-center mt-2">
+                            Audio playback is a placeholder. Phonetic breakdown coming soon.
+                        </p>
+                    </CardContent>
+                  </Card>
+                )}
                 
                 {generatedSentence && (
                   <div className="mt-8">
