@@ -24,7 +24,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import { LANGUAGES, FIELDS, type SelectionOption } from "@/constants/data";
 import { handleGenerateWordSet, type GenerateWordSetActionResult } from "@/app/actions";
-import { addWordSet } from "@/lib/activityStore";
+// Removed incorrect import: import { addWordSet } from "@/lib/activityStore"; 
 import { useToast } from "@/hooks/use-toast";
 import { Wand2, AlertTriangle, Languages, Lightbulb, Volume2, FileText, SpellCheck, BookOpenText, Home, ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -117,7 +117,7 @@ export default function LearnClientPage() {
       if (result.words.length > 0) {
         setSelectedWordDetail(result.words[0]); // Select the first word initially
       }
-      addWordSet(data.language, data.field, result.words, result.sentence);
+      // Activity logging is now handled in actions.ts
       toast({
         title: "Words & Sentence Generated!",
         description: `A new set for ${data.field} in ${data.language} is ready.`,
