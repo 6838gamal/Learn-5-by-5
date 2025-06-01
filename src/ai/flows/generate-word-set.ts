@@ -22,6 +22,8 @@ const WordEntrySchema = z.object({
   word: z.string().describe('A word in the target language related to the field.'),
   sentence: z.string().describe('A meaningful sentence using this specific word in the target language.'),
 });
+// This type is implicitly exported via GenerateWordSetOutput, but can be explicitly exported if needed elsewhere.
+// export type WordEntry = z.infer<typeof WordEntrySchema>; 
 
 const GenerateWordSetOutputSchema = z.object({
   wordEntries: z.array(WordEntrySchema).length(5).describe('A set of five distinct words, each accompanied by its own example sentence in the target language. Ensure the words are varied and relevant to the field.'),
@@ -64,3 +66,4 @@ const generateWordSetFlow = ai.defineFlow(
     return output;
   }
 );
+

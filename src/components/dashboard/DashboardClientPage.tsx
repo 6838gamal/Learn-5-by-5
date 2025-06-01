@@ -9,7 +9,7 @@ import {
   type ActivityRecord, 
   type WordSetActivityRecord,
   type ConversationActivityRecord,
-  type WordEntry, // Import WordEntry
+  type WordEntry,
   getActivityData 
 } from "@/lib/activityStore";
 import { BarChart, BookOpenText, Layers, ListChecks, Clock, Volume2, FileText, MessageSquare } from "lucide-react";

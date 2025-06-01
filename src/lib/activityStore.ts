@@ -40,6 +40,8 @@ function generateUniqueId(): string {
 // Updated to accept wordEntries
 export function addWordSetActivity(language: string, field: string, wordEntries: WordEntry[]): WordSetActivityRecord {
   if (typeof window === "undefined") {
+    // This case should ideally not be hit if called correctly from client components after server action.
+    // However, providing a fallback for SSR/build time if somehow invoked.
     const placeholderRecord: WordSetActivityRecord = {
       id: generateUniqueId(),
       type: 'wordSet',
@@ -48,6 +50,7 @@ export function addWordSetActivity(language: string, field: string, wordEntries:
       wordEntries,
       timestamp: Date.now()
     };
+    console.warn("addWordSetActivity called in a non-client environment. Activity not saved to localStorage.");
     return placeholderRecord;
   }
 
@@ -75,6 +78,7 @@ export function addConversationActivity(language: string, selectedWords: string[
       conversation,
       timestamp: Date.now(),
     };
+    console.warn("addConversationActivity called in a non-client environment. Activity not saved to localStorage.");
     return placeholderRecord;
   }
   const activityData = getActivityData();
@@ -99,50 +103,47 @@ export function getActivityData(): ActivityData {
   const data = localStorage.getItem(STORAGE_KEY);
   if (data) {
     try {
-      // Adjust parsing to handle potentially old format and new format
       const parsedData = JSON.parse(data) as { learnedItems: Partial<ActivityRecord & { words?: string[], sentence?: string }>[] };
       if (Array.isArray(parsedData.learnedItems)) {
         const migratedItems: ActivityRecord[] = parsedData.learnedItems.map(item => {
+          if (!item) return null; // Skip null/undefined items
           if (!item.id) item.id = generateUniqueId();
           if (!item.timestamp) item.timestamp = Date.now();
 
           if (item.type === 'wordSet') {
-            // If it's a wordSet, ensure it has wordEntries.
-            // This is a simple migration: old records might not have individual sentences.
-            // For new records, wordEntries should already be there.
-            // Old records with `words` and `sentence` will be converted.
-            if (item.words && Array.isArray(item.words) && !item.wordEntries) {
-               const singleSentence = (item as any).sentence || ""; // old sentence
-               (item as Partial<WordSetActivityRecord>).wordEntries = item.words.map(word => ({ word, sentence: singleSentence })); // Simplistic migration
-               delete (item as any).words;
-               delete (item as any).sentence;
+            // If old format (words array, single sentence), migrate to wordEntries
+            if (Array.isArray((item as any).words) && typeof (item as any).sentence === 'string' && !item.wordEntries) {
+              const oldWords = (item as any).words as string[];
+              const oldSentence = (item as any).sentence as string;
+              (item as WordSetActivityRecord).wordEntries = oldWords.map(word => ({ word, sentence: oldSentence })); // Simplistic migration for old structure
+              delete (item as any).words;
+              delete (item as any).sentence;
+            } else if (!Array.isArray(item.wordEntries)) { // Ensure wordEntries is an array if type is wordSet
+                (item as WordSetActivityRecord).wordEntries = [];
             }
-            return {
-              ...item,
-              wordEntries: (item as WordSetActivityRecord).wordEntries || [],
-            } as WordSetActivityRecord;
+            return item as WordSetActivityRecord;
           }
           if (item.type === 'conversation') {
              return {
                 ...item,
-                selectedWords: (item as ConversationActivityRecord).selectedWords || [],
+                selectedWords: Array.isArray((item as ConversationActivityRecord).selectedWords) ? (item as ConversationActivityRecord).selectedWords : [],
                 conversation: (item as ConversationActivityRecord).conversation || "",
              } as ConversationActivityRecord;
           }
           // If type is missing, assume it's an old wordSet and try to migrate
-          if (!item.type && item.field && (item as any).words) {
+          if (!item.type && item.field && (item as any).words && Array.isArray((item as any).words) ) {
             const wordsArray = (item as any).words as string[];
-            const singleSentence = (item as any).sentence || "";
+            const singleSentence = (item as any).sentence || "Sentence not available for this old record.";
             return {
               id: item.id!,
               type: 'wordSet',
               language: item.language!,
               field: item.field!,
-              wordEntries: wordsArray.map(w => ({word: w, sentence: singleSentence })), // Simplified: assign shared sentence
+              wordEntries: wordsArray.map(w => ({word: w, sentence: singleSentence })),
               timestamp: item.timestamp!,
             } as WordSetActivityRecord;
           }
-          return item as ActivityRecord; // Should be a fully formed new record
+          return item as ActivityRecord; 
         }).filter(item => item && item.type && item.id && item.language && item.timestamp) as ActivityRecord[];
         
         return { learnedItems: migratedItems };
@@ -158,6 +159,7 @@ export interface LearningStats {
   totalWordsLearned: number;
   fieldsCoveredCount: number;
   wordSetsGenerated: number;
+  // Future: add conversation stats if needed
 }
 
 export function getStats(): LearningStats {
@@ -171,7 +173,7 @@ export function getStats(): LearningStats {
   );
 
   const totalWordsLearned = wordSetActivities.reduce(
-    (sum, item) => sum + (item.wordEntries?.length || 0), // Count words from wordEntries
+    (sum, item) => sum + (item.wordEntries?.length || 0),
     0
   );
   const uniqueFields = new Set(
@@ -183,3 +185,4 @@ export function getStats(): LearningStats {
     wordSetsGenerated: wordSetActivities.length,
   };
 }
+

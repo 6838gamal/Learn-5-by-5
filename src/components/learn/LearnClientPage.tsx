@@ -26,7 +26,7 @@ import { LANGUAGES, FIELDS, type SelectionOption } from "@/constants/data";
 import { handleGenerateWordSet, type GenerateWordSetActionResult } from "@/app/actions";
 import { addWordSetActivity, type WordEntry } from "@/lib/activityStore";
 import { useToast } from "@/hooks/use-toast";
-import { Wand2, AlertTriangle, Languages, Lightbulb, Volume2, FileText, SpellCheck, BookOpenText, Home } from "lucide-react"; // Removed ChevronLeft, ChevronRight as Carousel provides them
+import { Wand2, AlertTriangle, Languages, Lightbulb, Volume2, FileText, SpellCheck, BookOpenText, Home } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   Carousel,
@@ -66,10 +66,15 @@ export default function LearnClientPage() {
     if (!carouselApi) {
       return
     }
-    setCurrentCarouselIndex(carouselApi.selectedScrollSnap())
-    carouselApi.on("select", () => {
+    setCurrentCarouselIndex(carouselApi.selectedScrollSnap()) // Initialize
+    const onSelect = () => {
       setCurrentCarouselIndex(carouselApi.selectedScrollSnap())
-    })
+    };
+    carouselApi.on("select", onSelect);
+    // Clean up listener
+    return () => {
+      carouselApi.off("select", onSelect);
+    };
   }, [carouselApi])
 
   useEffect(() => {
@@ -104,15 +109,20 @@ export default function LearnClientPage() {
     setSelectedWordEntry(null);
     setSplitWordView([]);
     setCurrentCarouselIndex(0);
+    if (carouselApi) {
+        carouselApi.scrollTo(0, true); // Reset carousel to first slide instantly
+    }
+
 
     const result: GenerateWordSetActionResult = await handleGenerateWordSet(data);
 
-    if (result.wordEntries && result.wordEntries.length > 0) {
+    if (result.wordEntries && result.wordEntries.length > 0 && result.language && result.field) {
       setGeneratedWordEntries(result.wordEntries);
       if (result.wordEntries.length > 0) {
-        setSelectedWordEntry(result.wordEntries[0]);
+        setSelectedWordEntry(result.wordEntries[0]); // Set first word as selected initially
       }
-      addWordSetActivity(data.language, data.field, result.wordEntries);
+      // Log activity on client-side after successful generation
+      addWordSetActivity(result.language, result.field, result.wordEntries);
       toast({
         title: "Word Entries Generated!",
         description: `A new set for ${data.field} in ${data.language} is ready.`,
@@ -124,11 +134,6 @@ export default function LearnClientPage() {
         title: "Generation Failed",
         description: result.error,
       });
-       if(result.wordEntries && result.wordEntries.length > 0) {
-        setGeneratedWordEntries(result.wordEntries);
-        setSelectedWordEntry(result.wordEntries[0]);
-        addWordSetActivity(data.language, data.field, result.wordEntries); // Still log activity
-      }
     }
     setIsLoading(false);
   }
@@ -136,13 +141,13 @@ export default function LearnClientPage() {
   const handlePlayWordAudio = (word: string | null) => {
     if (!word) return;
     console.log(`Playing audio for word: ${word}`);
-    alert(`Audio playback for "${word}" is not yet implemented.`);
+    alert(`Audio playback for "${word}" is not yet implemented. This feature will use Text-to-Speech in the future.`);
   };
 
   const handlePlaySentenceAudio = (sentence: string | null) => {
     if(!sentence) return;
     console.log(`Playing audio for sentence: ${sentence}`);
-    alert(`Audio playback for the sentence "${sentence}" is not yet implemented.`);
+    alert(`Audio playback for the sentence "${sentence}" is not yet implemented. This feature will use Text-to-Speech in the future.`);
   };
 
   const handleGoToHome = () => {
@@ -269,12 +274,12 @@ export default function LearnClientPage() {
             <div className="mt-8">
             {isLoading && (
               <div>
-                <Skeleton className="h-24 w-full mb-4" />
-                <Skeleton className="h-12 w-1/2 mx-auto mb-2" />
-                <Skeleton className="h-8 w-3/4 mx-auto mb-4" />
+                <Skeleton className="h-24 w-full mb-4" /> {/* Placeholder for carousel */}
+                <Skeleton className="h-12 w-1/2 mx-auto mb-2" /> {/* Placeholder for word title */}
+                <Skeleton className="h-8 w-3/4 mx-auto mb-4" /> {/* Placeholder for split word view */}
                 <div className="mt-6">
-                  <Skeleton className="h-8 w-1/3 mb-2" />
-                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-8 w-1/3 mb-2" /> {/* Placeholder for sentence title */}
+                  <Skeleton className="h-10 w-full" /> {/* Placeholder for sentence content */}
                 </div>
               </div>
             )}
@@ -302,7 +307,7 @@ export default function LearnClientPage() {
                 
                 {selectedWordEntry && (
                   <>
-                    <Card className="mt-4 mb-6 shadow-lg p-4">
+                    <Card className="mt-4 mb-6 shadow-lg p-4 bg-card">
                       <CardHeader className="p-2 pb-0 text-center">
                           <CardTitle className="text-4xl font-bold text-primary break-all">{selectedWordEntry.word}</CardTitle>
                       </CardHeader>
@@ -343,7 +348,7 @@ export default function LearnClientPage() {
                           <CardContent className="p-4">
                             <div className="flex items-start justify-between gap-3">
                               <p className="text-lg text-foreground flex-grow">{selectedWordEntry.sentence}</p>
-                              <Button variant="ghost" size="icon" onClick={() => handlePlaySentenceAudio(selectedWordEntry.sentence)} aria-label="Play audio for sentence">
+                              <Button variant="ghost" size="icon" onClick={() => handlePlaySentenceAudio(selectedWordEntry.sentence)} aria-label={`Play audio for sentence: ${selectedWordEntry.sentence}`}>
                                 <Volume2 className="w-6 h-6 text-muted-foreground hover:text-primary" />
                               </Button>
                             </div>

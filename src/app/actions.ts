@@ -13,10 +13,10 @@ const WordSetActionInputSchema = z.object({
 });
 
 export interface GenerateWordSetActionResult {
-  wordEntries?: WordEntry[]; // Changed from words and sentence
+  wordEntries?: WordEntry[];
   error?: string;
-  language?: string;
-  field?: string;
+  language?: string; // Pass back for client-side activity logging
+  field?: string;    // Pass back for client-side activity logging
 }
 
 export async function handleGenerateWordSet(
@@ -27,6 +27,7 @@ export async function handleGenerateWordSet(
     const result: GenerateWordSetOutput = await generateWordSet(validatedData);
     
     if (result.wordEntries && result.wordEntries.length > 0) {
+      // Return language and field so client can log activity
       return { wordEntries: result.wordEntries, language: validatedData.language, field: validatedData.field };
     }
     return { error: "No word entries were generated. Please try again." };
@@ -43,6 +44,7 @@ export async function handleGenerateWordSet(
   }
 }
 
+// Zod schema for validating conversation input within the action
 const ConversationActionInputSchema = z.object({
   language: z.string().describe('The language for the conversation.'),
   selectedWords: z.array(z.string()).min(2, "Please select at least two words.").describe('A list of words to include in the conversation.'),
@@ -52,8 +54,8 @@ const ConversationActionInputSchema = z.object({
 export interface GenerateConversationActionResult {
   conversation?: string;
   error?: string;
-  language?: string;
-  selectedWords?: string[];
+  language?: string; // Pass back for client-side activity logging
+  selectedWords?: string[]; // Pass back for client-side activity logging
 }
 
 export async function handleGenerateConversation(
@@ -63,6 +65,7 @@ export async function handleGenerateConversation(
     const validatedData = ConversationActionInputSchema.parse(data);
     const result: GenerateConversationOutput = await generateConversation(validatedData);
     if (result.conversation) {
+      // Return language and selectedWords so client can log activity
       return { conversation: result.conversation, language: validatedData.language, selectedWords: validatedData.selectedWords };
     }
     return { error: "No conversation was generated. Please try again." };
@@ -78,3 +81,4 @@ export async function handleGenerateConversation(
     return { error: errorMessage };
   }
 }
+
