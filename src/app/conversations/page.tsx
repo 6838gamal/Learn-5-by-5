@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { MessageCircle, Languages, ListChecks, AlertTriangle, Wand2, Loader2 } from "lucide-react";
-import { getActivityData, type WordSetRecord } from "@/lib/activityStore";
+import { getActivityData, type WordSetActivityRecord } from "@/lib/activityStore"; // WordSetRecord renamed to WordSetActivityRecord
 import { LANGUAGES, type SelectionOption } from "@/constants/data";
 import { handleGenerateConversation, type GenerateConversationActionResult } from "@/app/actions";
 import Link from 'next/link';
@@ -35,8 +35,9 @@ export default function ConversationsPage() {
       const activityData = getActivityData();
       const wordsSet = new Set<string>();
       activityData.learnedItems.forEach(record => {
-        if (record.language === selectedLanguage) {
-          record.words.forEach(word => wordsSet.add(word));
+        // Ensure we only access .words if the record is a WordSetActivityRecord
+        if (record.language === selectedLanguage && record.type === 'wordSet') {
+          (record as WordSetActivityRecord).words.forEach(word => wordsSet.add(word));
         }
       });
       setLanguageWords(Array.from(wordsSet).sort());
@@ -182,7 +183,7 @@ export default function ConversationsPage() {
                    <AlertTriangle className="h-4 w-4 text-primary" />
                   <AlertTitle>No Words Yet</AlertTitle>
                   <AlertDescription>
-                    You haven't generated any words in {selectedLanguage} yet. 
+                    You haven't generated any words in {LANGUAGES.find(l=>l.value === selectedLanguage)?.label || selectedLanguage} yet. 
                     Go to the <Link href="/words" className="underline hover:text-primary font-medium">Words section</Link> to add some!
                   </AlertDescription>
                 </Alert>
