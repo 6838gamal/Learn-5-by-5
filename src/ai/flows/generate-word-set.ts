@@ -30,6 +30,7 @@ export async function generateWordSet(input: GenerateWordSetInput): Promise<Gene
 
 const prompt = ai.definePrompt({
   name: 'generateWordSetPrompt',
+  model: 'googleai/gemini-1.5-flash-latest', // Added model specification
   input: {schema: GenerateWordSetInputSchema},
   output: {schema: GenerateWordSetOutputSchema},
   prompt: `You are a language learning assistant.

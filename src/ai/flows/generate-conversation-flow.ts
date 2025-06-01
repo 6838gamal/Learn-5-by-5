@@ -28,6 +28,7 @@ export async function generateConversation(input: GenerateConversationInput): Pr
 
 const prompt = ai.definePrompt({
   name: 'generateConversationPrompt',
+  model: 'googleai/gemini-1.5-flash-latest', // Added model specification
   input: {schema: GenerateConversationInputSchema},
   output: {schema: GenerateConversationOutputSchema},
   prompt: `You are a language learning assistant.
