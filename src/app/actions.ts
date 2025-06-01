@@ -3,7 +3,7 @@
 "use server";
 
 import { generateWordSet, type GenerateWordSetInput, type GenerateWordSetOutput } from "@/ai/flows/generate-word-set";
-import { generateConversation, type GenerateConversationInput, type GenerateConversationOutput, GenerateConversationInputSchema } from "@/ai/flows/generate-conversation-flow"; // Added
+import { generateConversation, type GenerateConversationInput, type GenerateConversationOutput } from "@/ai/flows/generate-conversation-flow"; // Removed GenerateConversationInputSchema import
 import { z } from "zod";
 
 const WordSetActionInputSchema = z.object({
@@ -43,18 +43,24 @@ export async function handleGenerateWordSet(
   }
 }
 
-// New action for generating conversations
+// Define the input schema for the conversation action locally
+const ConversationActionInputSchema = z.object({
+  language: z.string().describe('The language for the conversation.'),
+  selectedWords: z.array(z.string()).min(2, "Please select at least two words.").describe('A list of words to include in the conversation.'),
+});
+
+
 export interface GenerateConversationActionResult {
   conversation?: string;
   error?: string;
 }
 
 export async function handleGenerateConversation(
-  data: GenerateConversationInput
+  data: GenerateConversationInput // Still use the type from the flow for type safety when calling generateConversation
 ): Promise<GenerateConversationActionResult> {
   try {
-    // Validate input against the schema from the flow
-    const validatedData = GenerateConversationInputSchema.parse(data);
+    // Validate input against the locally defined schema
+    const validatedData = ConversationActionInputSchema.parse(data);
     const result: GenerateConversationOutput = await generateConversation(validatedData);
     if (result.conversation) {
       return { conversation: result.conversation };

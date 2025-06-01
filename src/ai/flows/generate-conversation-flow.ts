@@ -11,13 +11,13 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-export const GenerateConversationInputSchema = z.object({
+const GenerateConversationInputSchema = z.object({
   language: z.string().describe('The language for the conversation.'),
   selectedWords: z.array(z.string()).min(2, "Please select at least two words.").describe('A list of words to include in the conversation.'),
 });
 export type GenerateConversationInput = z.infer<typeof GenerateConversationInputSchema>;
 
-export const GenerateConversationOutputSchema = z.object({
+const GenerateConversationOutputSchema = z.object({
   conversation: z.string().describe('The generated conversation script.'),
 });
 export type GenerateConversationOutput = z.infer<typeof GenerateConversationOutputSchema>;
