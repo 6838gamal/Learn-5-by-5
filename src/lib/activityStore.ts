@@ -2,13 +2,17 @@
 // Ensure this code only runs on the client-side
 "use client";
 
+export interface WordEntry {
+  word: string;
+  sentence: string;
+}
+
 export interface WordSetActivityRecord {
   id: string;
   type: 'wordSet';
   language: string;
   field: string;
-  words: string[];
-  sentence: string;
+  wordEntries: WordEntry[]; // Changed from words: string[] and sentence: string
   timestamp: number;
 }
 
@@ -33,17 +37,16 @@ function generateUniqueId(): string {
   return Date.now().toString() + Math.random().toString(36).substring(2, 9);
 }
 
-export function addWordSetActivity(language: string, field: string, words: string[], sentence: string): WordSetActivityRecord {
+// Updated to accept wordEntries
+export function addWordSetActivity(language: string, field: string, wordEntries: WordEntry[]): WordSetActivityRecord {
   if (typeof window === "undefined") {
-    // Should not happen if called from client component effect
-    const placeholderRecord: WordSetActivityRecord = { 
-      id: generateUniqueId(), 
+    const placeholderRecord: WordSetActivityRecord = {
+      id: generateUniqueId(),
       type: 'wordSet',
-      language, 
-      field, 
-      words, 
-      sentence, 
-      timestamp: Date.now() 
+      language,
+      field,
+      wordEntries,
+      timestamp: Date.now()
     };
     return placeholderRecord;
   }
@@ -54,8 +57,7 @@ export function addWordSetActivity(language: string, field: string, words: strin
     type: 'wordSet',
     language,
     field,
-    words,
-    sentence,
+    wordEntries,
     timestamp: Date.now(),
   };
   activityData.learnedItems.unshift(newRecord);
@@ -97,44 +99,51 @@ export function getActivityData(): ActivityData {
   const data = localStorage.getItem(STORAGE_KEY);
   if (data) {
     try {
-      const parsedData = JSON.parse(data) as { learnedItems: Partial<ActivityRecord>[] }; // Allow partial for migration
+      // Adjust parsing to handle potentially old format and new format
+      const parsedData = JSON.parse(data) as { learnedItems: Partial<ActivityRecord & { words?: string[], sentence?: string }>[] };
       if (Array.isArray(parsedData.learnedItems)) {
         const migratedItems: ActivityRecord[] = parsedData.learnedItems.map(item => {
-          if (!item.type && item.field && item.words) { // Likely an old WordSetRecord
-            return {
-              id: item.id || generateUniqueId(),
-              type: 'wordSet',
-              language: item.language!,
-              field: item.field!,
-              words: item.words!,
-              sentence: (item as WordSetActivityRecord).sentence || "", // Ensure sentence, cast to access
-              timestamp: item.timestamp || Date.now(),
-            } as WordSetActivityRecord;
-          }
-          // Ensure new records have all their fields or provide defaults
+          if (!item.id) item.id = generateUniqueId();
+          if (!item.timestamp) item.timestamp = Date.now();
+
           if (item.type === 'wordSet') {
-            return { 
-              ...item, 
-              sentence: (item as WordSetActivityRecord).sentence || "",
-              id: item.id || generateUniqueId(),
-              language: item.language!,
-              field: (item as WordSetActivityRecord).field!,
-              words: (item as WordSetActivityRecord).words!,
-              timestamp: item.timestamp || Date.now(),
+            // If it's a wordSet, ensure it has wordEntries.
+            // This is a simple migration: old records might not have individual sentences.
+            // For new records, wordEntries should already be there.
+            // Old records with `words` and `sentence` will be converted.
+            if (item.words && Array.isArray(item.words) && !item.wordEntries) {
+               const singleSentence = (item as any).sentence || ""; // old sentence
+               (item as Partial<WordSetActivityRecord>).wordEntries = item.words.map(word => ({ word, sentence: singleSentence })); // Simplistic migration
+               delete (item as any).words;
+               delete (item as any).sentence;
+            }
+            return {
+              ...item,
+              wordEntries: (item as WordSetActivityRecord).wordEntries || [],
             } as WordSetActivityRecord;
           }
           if (item.type === 'conversation') {
              return {
                 ...item,
-                id: item.id || generateUniqueId(),
-                language: item.language!,
                 selectedWords: (item as ConversationActivityRecord).selectedWords || [],
                 conversation: (item as ConversationActivityRecord).conversation || "",
-                timestamp: item.timestamp || Date.now(),
              } as ConversationActivityRecord;
           }
+          // If type is missing, assume it's an old wordSet and try to migrate
+          if (!item.type && item.field && (item as any).words) {
+            const wordsArray = (item as any).words as string[];
+            const singleSentence = (item as any).sentence || "";
+            return {
+              id: item.id!,
+              type: 'wordSet',
+              language: item.language!,
+              field: item.field!,
+              wordEntries: wordsArray.map(w => ({word: w, sentence: singleSentence })), // Simplified: assign shared sentence
+              timestamp: item.timestamp!,
+            } as WordSetActivityRecord;
+          }
           return item as ActivityRecord; // Should be a fully formed new record
-        }).filter(item => item && item.type && item.id && item.language && item.timestamp) as ActivityRecord[]; // Filter out malformed
+        }).filter(item => item && item.type && item.id && item.language && item.timestamp) as ActivityRecord[];
         
         return { learnedItems: migratedItems };
       }
@@ -148,7 +157,7 @@ export function getActivityData(): ActivityData {
 export interface LearningStats {
   totalWordsLearned: number;
   fieldsCoveredCount: number;
-  wordSetsGenerated: number; // Specifically word sets
+  wordSetsGenerated: number;
 }
 
 export function getStats(): LearningStats {
@@ -162,7 +171,7 @@ export function getStats(): LearningStats {
   );
 
   const totalWordsLearned = wordSetActivities.reduce(
-    (sum, item) => sum + item.words.length,
+    (sum, item) => sum + (item.wordEntries?.length || 0), // Count words from wordEntries
     0
   );
   const uniqueFields = new Set(

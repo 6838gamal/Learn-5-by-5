@@ -6,42 +6,42 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Mic, Volume2, Info, BookOpenText, FileText } from "lucide-react";
 import Link from "next/link";
-import { getActivityData, type WordSetActivityRecord } from "@/lib/activityStore";
+import { getActivityData, type WordSetActivityRecord, type WordEntry } from "@/lib/activityStore";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-interface WordSoundEntry {
+interface DisplayableWordSoundEntry {
   word: string;
-  sentence: string | null;
+  sentence: string | null; // Sentence can be null if not found or if a word existed without one
 }
 
 export default function SoundsPage() {
-  const [wordSoundEntries, setWordSoundEntries] = useState<WordSoundEntry[]>([]);
+  const [displayableEntries, setDisplayableEntries] = useState<DisplayableWordSoundEntry[]>([]);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
     if (typeof window !== "undefined") {
       const activityData = getActivityData();
-      const wordMap = new Map<string, { sentence: string | null, timestamp: number }>();
+      const wordSentenceMap = new Map<string, { sentence: string | null, timestamp: number }>();
 
-      // Activity items are stored with newest first due to unshift
       activityData.learnedItems.forEach(record => {
-        if (record.type === 'wordSet') {
-          record.words.forEach(word => {
-            if (!wordMap.has(word)) { // Capture sentence from the most recent record for this word
-              wordMap.set(word, { sentence: record.sentence, timestamp: record.timestamp });
+        if (record.type === 'wordSet' && record.wordEntries) {
+          record.wordEntries.forEach((entry: WordEntry) => {
+            // If word is new or this record is newer, update/add its sentence
+            if (!wordSentenceMap.has(entry.word) || record.timestamp > (wordSentenceMap.get(entry.word)?.timestamp || 0)) {
+              wordSentenceMap.set(entry.word, { sentence: entry.sentence, timestamp: record.timestamp });
             }
           });
         }
       });
       
-      const processedEntries = Array.from(wordMap.entries()).map(([word, data]) => ({
+      const processedEntries: DisplayableWordSoundEntry[] = Array.from(wordSentenceMap.entries()).map(([word, data]) => ({
         word,
         sentence: data.sentence,
-      })).sort((a, b) => a.word.localeCompare(b.word));
+      })).sort((a, b) => a.word.localeCompare(b.word)); // Sort alphabetically by word
 
-      setWordSoundEntries(processedEntries);
+      setDisplayableEntries(processedEntries);
     }
   }, []);
 
@@ -50,7 +50,8 @@ export default function SoundsPage() {
     alert(`Audio playback for "${word}" is not yet implemented. This feature will use Text-to-Speech in the future.`);
   };
 
-  const handlePlaySentenceAudio = (sentence: string) => {
+  const handlePlaySentenceAudio = (sentence: string | null) => {
+    if (!sentence) return;
     console.log(`Playing audio for sentence: ${sentence}`);
     alert(`Audio playback for the sentence "${sentence}" is not yet implemented. This feature will use Text-to-Speech in the future.`);
   };
@@ -93,7 +94,7 @@ export default function SoundsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {wordSoundEntries.length > 0 ? (
+          {displayableEntries.length > 0 ? (
             <>
               <Alert className="mb-6 bg-secondary/30">
                 <Info className="h-5 w-5 text-primary" />
@@ -104,7 +105,7 @@ export default function SoundsPage() {
               </Alert>
               <ScrollArea className="h-[400px] pr-3">
                 <ul className="space-y-4">
-                  {wordSoundEntries.map((entry) => (
+                  {displayableEntries.map((entry) => (
                     <li
                       key={entry.word}
                       className="p-4 bg-card border rounded-lg shadow-sm hover:bg-muted/50 transition-colors flex flex-col items-start gap-3"
@@ -132,7 +133,7 @@ export default function SoundsPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => handlePlaySentenceAudio(entry.sentence!)}
+                              onClick={() => handlePlaySentenceAudio(entry.sentence)}
                               aria-label={`Play audio for sentence: ${entry.sentence}`}
                               className="text-muted-foreground hover:text-primary shrink-0"
                             >

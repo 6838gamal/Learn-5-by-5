@@ -5,7 +5,7 @@
 import { generateWordSet, type GenerateWordSetInput, type GenerateWordSetOutput } from "@/ai/flows/generate-word-set";
 import { generateConversation, type GenerateConversationInput, type GenerateConversationOutput } from "@/ai/flows/generate-conversation-flow";
 import { z } from "zod";
-// Removed: import { addWordSetActivity, addConversationActivity } from "@/lib/activityStore";
+import type { WordEntry } from "@/lib/activityStore"; // Import WordEntry type
 
 const WordSetActionInputSchema = z.object({
   language: z.string().min(1, "Language is required."),
@@ -13,10 +13,8 @@ const WordSetActionInputSchema = z.object({
 });
 
 export interface GenerateWordSetActionResult {
-  words?: string[];
-  sentence?: string;
+  wordEntries?: WordEntry[]; // Changed from words and sentence
   error?: string;
-  // Added language and field to be returned to client if needed, though client has them
   language?: string;
   field?: string;
 }
@@ -27,15 +25,11 @@ export async function handleGenerateWordSet(
   try {
     const validatedData = WordSetActionInputSchema.parse(data);
     const result: GenerateWordSetOutput = await generateWordSet(validatedData);
-    if (result.words && result.words.length > 0 && result.sentence) {
-      // Removed: addWordSetActivity(validatedData.language, validatedData.field, result.words, result.sentence);
-      return { words: result.words, sentence: result.sentence, language: validatedData.language, field: validatedData.field };
+    
+    if (result.wordEntries && result.wordEntries.length > 0) {
+      return { wordEntries: result.wordEntries, language: validatedData.language, field: validatedData.field };
     }
-    if (result.words && result.words.length > 0 && !result.sentence) {
-        // Removed: addWordSetActivity(validatedData.language, validatedData.field, result.words, "");
-        return { words: result.words, error: "Words were generated, but the sentence was missing.", language: validatedData.language, field: validatedData.field };
-    }
-    return { error: "No words or sentence were generated. Please try again." };
+    return { error: "No word entries were generated. Please try again." };
   } catch (e) {
     console.error("Error generating word set:", e);
     if (e instanceof z.ZodError) {
@@ -58,7 +52,6 @@ const ConversationActionInputSchema = z.object({
 export interface GenerateConversationActionResult {
   conversation?: string;
   error?: string;
-  // Added language and selectedWords to be returned to client if needed, though client has them
   language?: string;
   selectedWords?: string[];
 }
@@ -70,7 +63,6 @@ export async function handleGenerateConversation(
     const validatedData = ConversationActionInputSchema.parse(data);
     const result: GenerateConversationOutput = await generateConversation(validatedData);
     if (result.conversation) {
-      // Removed: addConversationActivity(validatedData.language, validatedData.selectedWords, result.conversation);
       return { conversation: result.conversation, language: validatedData.language, selectedWords: validatedData.selectedWords };
     }
     return { error: "No conversation was generated. Please try again." };
@@ -86,4 +78,3 @@ export async function handleGenerateConversation(
     return { error: errorMessage };
   }
 }
-

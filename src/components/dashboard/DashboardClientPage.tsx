@@ -9,6 +9,7 @@ import {
   type ActivityRecord, 
   type WordSetActivityRecord,
   type ConversationActivityRecord,
+  type WordEntry, // Import WordEntry
   getActivityData 
 } from "@/lib/activityStore";
 import { BarChart, BookOpenText, Layers, ListChecks, Clock, Volume2, FileText, MessageSquare } from "lucide-react";
@@ -37,7 +38,7 @@ export default function DashboardClientPage() {
     if (typeof window !== "undefined") {
       setStats(getStats());
       const activityData = getActivityData();
-      setRecentActivity(activityData.learnedItems.slice(0, 10)); // Get last 10 activities
+      setRecentActivity(activityData.learnedItems.slice(0, 10)); 
     }
   }, []);
 
@@ -50,6 +51,12 @@ export default function DashboardClientPage() {
     console.log(`Playing audio for sentence: ${sentence}`);
     alert(`Audio playback for the sentence is not yet implemented.`);
   };
+  
+  const handlePlayWordAudioInDialog = (word: string) => {
+    console.log(`Playing audio for word: ${word}`);
+    alert(`Audio playback for the word is not yet implemented.`);
+  };
+
 
   if (!isClient) {
     return (
@@ -75,6 +82,8 @@ export default function DashboardClientPage() {
   const renderActivityItem = (activity: ActivityRecord) => {
     if (activity.type === 'wordSet') {
       const wordSet = activity as WordSetActivityRecord;
+      const firstWord = wordSet.wordEntries?.[0]?.word || "words";
+      const firstSentence = wordSet.wordEntries?.[0]?.sentence || "sentences";
       return (
         <>
           <div className="flex justify-between items-center mb-1">
@@ -86,10 +95,12 @@ export default function DashboardClientPage() {
               {formatDistanceToNow(new Date(wordSet.timestamp), { addSuffix: true })}
             </span>
           </div>
-          <p className="text-sm text-muted-foreground">Words: {wordSet.words.join(", ").substring(0, 50)}{wordSet.words.join(", ").length > 50 ? "..." : ""}</p>
-          {wordSet.sentence && (
-            <p className="text-sm text-muted-foreground mt-1 italic">Sentence: {wordSet.sentence.substring(0,50)}{wordSet.sentence.length > 50 ? "..." : ""}</p>
-          )}
+          <p className="text-sm text-muted-foreground">
+            Generated {wordSet.wordEntries?.length || 0} word entries.
+          </p>
+          <p className="text-sm text-muted-foreground mt-1 italic">
+            e.g., "{firstWord}": {firstSentence.substring(0,50)}{firstSentence.length > 50 ? "..." : ""}
+          </p>
         </>
       );
     } else if (activity.type === 'conversation') {
@@ -139,34 +150,40 @@ export default function DashboardClientPage() {
               <span className="text-sm text-foreground">{wordSet.field}</span>
             </div>
             <div className="flex items-start">
-              <span className="text-sm font-medium text-muted-foreground w-24 mt-1">Words:</span>
-              <ScrollArea className="h-24 w-full rounded-md border p-2">
-                <ul className="list-disc list-inside text-sm text-foreground">
-                  {wordSet.words.map((word, index) => (
-                    <li key={index}>{word}</li>
+              <span className="text-sm font-medium text-muted-foreground w-24 mt-1">Entries:</span>
+              <ScrollArea className="h-48 w-full rounded-md border p-2">
+                <ul className="space-y-3">
+                  {wordSet.wordEntries?.map((entry, index) => (
+                    <li key={index} className="border-b pb-2 mb-2 last:border-b-0 last:pb-0 last:mb-0">
+                      <div className="flex items-center justify-between">
+                        <strong className="text-sm text-foreground">{entry.word}</strong>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6 shrink-0"
+                          onClick={() => handlePlayWordAudioInDialog(entry.word)} 
+                          aria-label={`Play audio for ${entry.word}`}
+                        >
+                          <Volume2 className="w-4 h-4 text-muted-foreground hover:text-primary" />
+                        </Button>
+                      </div>
+                      <div className="flex items-start justify-between gap-1 mt-1">
+                        <p className="text-xs text-muted-foreground flex-grow">{entry.sentence}</p>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6 shrink-0"
+                          onClick={() => handlePlaySentenceAudioInDialog(entry.sentence)} 
+                          aria-label={`Play audio for sentence: ${entry.sentence}`}
+                        >
+                          <Volume2 className="w-4 h-4 text-muted-foreground hover:text-primary" />
+                        </Button>
+                      </div>
+                    </li>
                   ))}
                 </ul>
               </ScrollArea>
             </div>
-            {wordSet.sentence && (
-              <div className="flex items-start">
-                <span className="text-sm font-medium text-muted-foreground w-24 mt-1 flex items-center gap-1">
-                  <FileText className="w-4 h-4"/> Sentence:
-                </span>
-                <div className="flex-grow flex items-start justify-between gap-2 border rounded-md p-2 bg-secondary/20">
-                  <p className="text-sm text-foreground ">{wordSet.sentence}</p>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-6 w-6 shrink-0"
-                    onClick={() => handlePlaySentenceAudioInDialog(wordSet.sentence)} 
-                    aria-label="Play audio for sentence"
-                  >
-                    <Volume2 className="w-4 h-4 text-muted-foreground hover:text-primary" />
-                  </Button>
-                </div>
-              </div>
-            )}
             <div className="flex items-center">
               <span className="text-sm font-medium text-muted-foreground w-24">Date:</span>
               <span className="text-sm text-foreground">

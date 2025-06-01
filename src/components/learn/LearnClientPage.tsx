@@ -24,9 +24,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import { LANGUAGES, FIELDS, type SelectionOption } from "@/constants/data";
 import { handleGenerateWordSet, type GenerateWordSetActionResult } from "@/app/actions";
-import { addWordSetActivity } from "@/lib/activityStore"; // Added import
+import { addWordSetActivity, type WordEntry } from "@/lib/activityStore";
 import { useToast } from "@/hooks/use-toast";
-import { Wand2, AlertTriangle, Languages, Lightbulb, Volume2, FileText, SpellCheck, BookOpenText, Home, ChevronLeft, ChevronRight } from "lucide-react";
+import { Wand2, AlertTriangle, Languages, Lightbulb, Volume2, FileText, SpellCheck, BookOpenText, Home } from "lucide-react"; // Removed ChevronLeft, ChevronRight as Carousel provides them
 import { useRouter } from "next/navigation";
 import {
   Carousel,
@@ -45,8 +45,7 @@ const learnFormSchema = z.object({
 type LearnFormValues = z.infer<typeof learnFormSchema>;
 
 export default function LearnClientPage() {
-  const [generatedWords, setGeneratedWords] = useState<string[]>([]);
-  const [generatedSentence, setGeneratedSentence] = useState<string>("");
+  const [generatedWordEntries, setGeneratedWordEntries] = useState<WordEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -55,7 +54,7 @@ export default function LearnClientPage() {
   const [isClient, setIsClient] = useState(false);
   const [carouselApi, setCarouselApi] = React.useState<CarouselApi>()
   const [currentCarouselIndex, setCurrentCarouselIndex] = React.useState(0)
-  const [selectedWordDetail, setSelectedWordDetail] = useState<string | null>(null);
+  const [selectedWordEntry, setSelectedWordEntry] = useState<WordEntry | null>(null);
   const [splitWordView, setSplitWordView] = useState<string[]>([]);
 
 
@@ -67,29 +66,27 @@ export default function LearnClientPage() {
     if (!carouselApi) {
       return
     }
-
     setCurrentCarouselIndex(carouselApi.selectedScrollSnap())
-
     carouselApi.on("select", () => {
       setCurrentCarouselIndex(carouselApi.selectedScrollSnap())
     })
   }, [carouselApi])
 
   useEffect(() => {
-    if (generatedWords.length > 0) {
-      setSelectedWordDetail(generatedWords[currentCarouselIndex]);
+    if (generatedWordEntries.length > 0 && currentCarouselIndex < generatedWordEntries.length) {
+      setSelectedWordEntry(generatedWordEntries[currentCarouselIndex]);
     } else {
-      setSelectedWordDetail(null);
+      setSelectedWordEntry(null);
     }
-  }, [currentCarouselIndex, generatedWords]);
+  }, [currentCarouselIndex, generatedWordEntries]);
 
   useEffect(() => {
-    if (selectedWordDetail) {
-      setSplitWordView(selectedWordDetail.split(""));
+    if (selectedWordEntry) {
+      setSplitWordView(selectedWordEntry.word.split(""));
     } else {
       setSplitWordView([]);
     }
-  }, [selectedWordDetail]);
+  }, [selectedWordEntry]);
 
 
   const form = useForm<LearnFormValues>({
@@ -103,23 +100,21 @@ export default function LearnClientPage() {
   async function onSubmit(data: LearnFormValues) {
     setIsLoading(true);
     setError(null);
-    setGeneratedWords([]);
-    setGeneratedSentence("");
-    setSelectedWordDetail(null);
+    setGeneratedWordEntries([]);
+    setSelectedWordEntry(null);
     setSplitWordView([]);
-    setCurrentCarouselIndex(0); // Reset carousel index
+    setCurrentCarouselIndex(0);
 
     const result: GenerateWordSetActionResult = await handleGenerateWordSet(data);
 
-    if (result.words && result.sentence) {
-      setGeneratedWords(result.words);
-      setGeneratedSentence(result.sentence);
-      if (result.words.length > 0) {
-        setSelectedWordDetail(result.words[0]); // Select the first word initially
+    if (result.wordEntries && result.wordEntries.length > 0) {
+      setGeneratedWordEntries(result.wordEntries);
+      if (result.wordEntries.length > 0) {
+        setSelectedWordEntry(result.wordEntries[0]);
       }
-      addWordSetActivity(data.language, data.field, result.words, result.sentence); // Call client-side activity store
+      addWordSetActivity(data.language, data.field, result.wordEntries);
       toast({
-        title: "Words & Sentence Generated!",
+        title: "Word Entries Generated!",
         description: `A new set for ${data.field} in ${data.language} is ready.`,
       });
     } else if (result.error) {
@@ -129,11 +124,10 @@ export default function LearnClientPage() {
         title: "Generation Failed",
         description: result.error,
       });
-       if(result.words && result.words.length > 0) { // If words were generated but sentence failed
-        setGeneratedWords(result.words);
-        setSelectedWordDetail(result.words[0]);
-        // Still log activity even if sentence is missing
-        addWordSetActivity(data.language, data.field, result.words, "");
+       if(result.wordEntries && result.wordEntries.length > 0) {
+        setGeneratedWordEntries(result.wordEntries);
+        setSelectedWordEntry(result.wordEntries[0]);
+        addWordSetActivity(data.language, data.field, result.wordEntries); // Still log activity
       }
     }
     setIsLoading(false);
@@ -145,9 +139,10 @@ export default function LearnClientPage() {
     alert(`Audio playback for "${word}" is not yet implemented.`);
   };
 
-  const handlePlaySentenceAudio = () => {
-    console.log(`Playing audio for sentence: ${generatedSentence}`);
-    alert(`Audio playback for the sentence is not yet implemented.`);
+  const handlePlaySentenceAudio = (sentence: string | null) => {
+    if(!sentence) return;
+    console.log(`Playing audio for sentence: ${sentence}`);
+    alert(`Audio playback for the sentence "${sentence}" is not yet implemented.`);
   };
 
   const handleGoToHome = () => {
@@ -180,7 +175,7 @@ export default function LearnClientPage() {
             </CardTitle>
           </div>
           <CardDescription className="text-center text-lg">
-            Select a language and field to generate 5 topic-related words and an example sentence using them.
+            Select language and field to generate 5 words, each with an example sentence.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -274,9 +269,9 @@ export default function LearnClientPage() {
             <div className="mt-8">
             {isLoading && (
               <div>
-                <Skeleton className="h-24 w-full mb-4" /> {/* Placeholder for carousel */}
-                <Skeleton className="h-12 w-1/2 mx-auto mb-2" /> {/* Placeholder for selected word */}
-                <Skeleton className="h-8 w-3/4 mx-auto mb-4" /> {/* Placeholder for split word */}
+                <Skeleton className="h-24 w-full mb-4" />
+                <Skeleton className="h-12 w-1/2 mx-auto mb-2" />
+                <Skeleton className="h-8 w-3/4 mx-auto mb-4" />
                 <div className="mt-6">
                   <Skeleton className="h-8 w-1/3 mb-2" />
                   <Skeleton className="h-10 w-full" />
@@ -284,18 +279,18 @@ export default function LearnClientPage() {
               </div>
             )}
 
-            {!isLoading && generatedWords.length > 0 && (
+            {!isLoading && generatedWordEntries.length > 0 && (
               <>
                 <h3 className="text-2xl font-semibold mb-4 text-center text-primary flex items-center justify-center gap-2">
                   <SpellCheck className="w-7 h-7 text-accent"/> Your Word Set:
                 </h3>
                 <Carousel setApi={setCarouselApi} className="w-full max-w-xs sm:max-w-sm md:max-w-md mx-auto mb-6">
                   <CarouselContent>
-                    {generatedWords.map((word, index) => (
+                    {generatedWordEntries.map((entry, index) => (
                       <CarouselItem key={index}>
                         <Card className="shadow-md bg-gradient-to-br from-background to-secondary/30">
                           <CardContent className="flex aspect-square items-center justify-center p-6">
-                            <span className="text-3xl font-semibold text-primary">{word}</span>
+                            <span className="text-3xl font-semibold text-primary">{entry.word}</span>
                           </CardContent>
                         </Card>
                       </CarouselItem>
@@ -305,58 +300,60 @@ export default function LearnClientPage() {
                   <CarouselNext />
                 </Carousel>
                 
-                {selectedWordDetail && (
-                  <Card className="mt-4 mb-6 shadow-lg p-4">
-                    <CardHeader className="p-2 pb-0 text-center">
-                        <CardTitle className="text-4xl font-bold text-primary break-all">{selectedWordDetail}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-2">
-                        <div className="flex justify-center items-center my-3 space-x-1">
-                        {splitWordView.map((letter, index) => (
-                            <span 
-                            key={index} 
-                            className="flex items-center justify-center w-8 h-10 sm:w-10 sm:h-12 bg-muted text-foreground border border-border rounded-md text-lg sm:text-xl font-medium shadow-sm"
-                            >
-                            {letter}
-                            </span>
-                        ))}
-                        </div>
-                        <div className="text-center">
-                            <Button 
-                                variant="ghost" 
-                                size="lg" 
-                                onClick={() => handlePlayWordAudio(selectedWordDetail)}
-                                aria-label={`Play audio for ${selectedWordDetail}`}
-                                className="text-muted-foreground hover:text-primary"
-                            >
-                                <Volume2 className="w-7 h-7 mr-2" /> Listen
-                            </Button>
-                        </div>
-                        <p className="text-xs text-muted-foreground text-center mt-2">
-                            Audio playback is a placeholder. Phonetic breakdown coming soon.
-                        </p>
-                    </CardContent>
-                  </Card>
-                )}
-                
-                {generatedSentence && (
-                  <div className="mt-8">
-                    <h3 className="text-2xl font-semibold mb-3 text-center text-primary flex items-center justify-center gap-2">
-                      <FileText className="w-7 h-7 text-accent" /> Example Sentence:
-                    </h3>
-                    <Card className="shadow-md bg-secondary/20">
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <p className="text-lg text-foreground flex-grow">{generatedSentence}</p>
-                          <Button variant="ghost" size="icon" onClick={handlePlaySentenceAudio} aria-label="Play audio for sentence">
-                            <Volume2 className="w-6 h-6 text-muted-foreground hover:text-primary" />
-                          </Button>
-                        </div>
+                {selectedWordEntry && (
+                  <>
+                    <Card className="mt-4 mb-6 shadow-lg p-4">
+                      <CardHeader className="p-2 pb-0 text-center">
+                          <CardTitle className="text-4xl font-bold text-primary break-all">{selectedWordEntry.word}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-2">
+                          <div className="flex justify-center items-center my-3 space-x-1">
+                          {splitWordView.map((letter, index) => (
+                              <span 
+                              key={index} 
+                              className="flex items-center justify-center w-8 h-10 sm:w-10 sm:h-12 bg-muted text-foreground border border-border rounded-md text-lg sm:text-xl font-medium shadow-sm"
+                              >
+                              {letter}
+                              </span>
+                          ))}
+                          </div>
+                          <div className="text-center">
+                              <Button 
+                                  variant="ghost" 
+                                  size="lg" 
+                                  onClick={() => handlePlayWordAudio(selectedWordEntry.word)}
+                                  aria-label={`Play audio for ${selectedWordEntry.word}`}
+                                  className="text-muted-foreground hover:text-primary"
+                              >
+                                  <Volume2 className="w-7 h-7 mr-2" /> Listen to Word
+                              </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground text-center mt-2">
+                              Audio playback is a placeholder. Phonetic breakdown coming soon.
+                          </p>
                       </CardContent>
                     </Card>
-                  </div>
-                )}
 
+                    {selectedWordEntry.sentence && (
+                      <div className="mt-4">
+                        <h3 className="text-xl font-semibold mb-2 text-center text-primary flex items-center justify-center gap-2">
+                          <FileText className="w-6 h-6 text-accent" /> Example Sentence:
+                        </h3>
+                        <Card className="shadow-md bg-secondary/20">
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <p className="text-lg text-foreground flex-grow">{selectedWordEntry.sentence}</p>
+                              <Button variant="ghost" size="icon" onClick={() => handlePlaySentenceAudio(selectedWordEntry.sentence)} aria-label="Play audio for sentence">
+                                <Volume2 className="w-6 h-6 text-muted-foreground hover:text-primary" />
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    )}
+                  </>
+                )}
+                
                 <p className="mt-6 text-sm text-muted-foreground text-center">
                   Content generated by AI. Explore meanings and usage!
                 </p>
@@ -372,7 +369,7 @@ export default function LearnClientPage() {
                 </div>
               </>
             )}
-            {!isLoading && generatedWords.length === 0 && !error && ( 
+            {!isLoading && generatedWordEntries.length === 0 && !error && ( 
                  <div className="text-center text-muted-foreground mt-8 py-6 border-2 border-dashed rounded-lg">
                     <p className="text-lg">Ready to learn some new words and sentences?</p>
                     <p>Select a language and field, then click "Generate Content".</p>
@@ -385,4 +382,3 @@ export default function LearnClientPage() {
     </div>
   );
 }
-
