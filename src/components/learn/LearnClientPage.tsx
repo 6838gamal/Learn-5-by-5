@@ -24,7 +24,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import { LANGUAGES, FIELDS, type SelectionOption } from "@/constants/data";
 import { handleGenerateWordSet, type GenerateWordSetActionResult } from "@/app/actions";
-// Removed incorrect import: import { addWordSet } from "@/lib/activityStore"; 
+import { addWordSetActivity } from "@/lib/activityStore"; // Added import
 import { useToast } from "@/hooks/use-toast";
 import { Wand2, AlertTriangle, Languages, Lightbulb, Volume2, FileText, SpellCheck, BookOpenText, Home, ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -117,7 +117,7 @@ export default function LearnClientPage() {
       if (result.words.length > 0) {
         setSelectedWordDetail(result.words[0]); // Select the first word initially
       }
-      // Activity logging is now handled in actions.ts
+      addWordSetActivity(data.language, data.field, result.words, result.sentence); // Call client-side activity store
       toast({
         title: "Words & Sentence Generated!",
         description: `A new set for ${data.field} in ${data.language} is ready.`,
@@ -129,9 +129,11 @@ export default function LearnClientPage() {
         title: "Generation Failed",
         description: result.error,
       });
-       if(result.words && result.words.length > 0) {
+       if(result.words && result.words.length > 0) { // If words were generated but sentence failed
         setGeneratedWords(result.words);
-         setSelectedWordDetail(result.words[0]); // Select the first word even if sentence fails
+        setSelectedWordDetail(result.words[0]);
+        // Still log activity even if sentence is missing
+        addWordSetActivity(data.language, data.field, result.words, "");
       }
     }
     setIsLoading(false);
@@ -383,3 +385,4 @@ export default function LearnClientPage() {
     </div>
   );
 }
+

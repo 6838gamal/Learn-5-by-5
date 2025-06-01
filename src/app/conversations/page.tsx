@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { MessageCircle, Languages, ListChecks, AlertTriangle, Wand2, Loader2 } from "lucide-react";
-import { getActivityData, type WordSetActivityRecord } from "@/lib/activityStore"; // WordSetRecord renamed to WordSetActivityRecord
+import { getActivityData, type WordSetActivityRecord, addConversationActivity } from "@/lib/activityStore"; // Added addConversationActivity
 import { LANGUAGES, type SelectionOption } from "@/constants/data";
 import { handleGenerateConversation, type GenerateConversationActionResult } from "@/app/actions";
 import Link from 'next/link';
@@ -35,14 +35,13 @@ export default function ConversationsPage() {
       const activityData = getActivityData();
       const wordsSet = new Set<string>();
       activityData.learnedItems.forEach(record => {
-        // Ensure we only access .words if the record is a WordSetActivityRecord
         if (record.language === selectedLanguage && record.type === 'wordSet') {
           (record as WordSetActivityRecord).words.forEach(word => wordsSet.add(word));
         }
       });
       setLanguageWords(Array.from(wordsSet).sort());
-      setSelectedWords([]); // Reset selected words when language changes
-      setGeneratedConversation(null); // Clear previous conversation
+      setSelectedWords([]); 
+      setGeneratedConversation(null); 
       setError(null);
     } else {
       setLanguageWords([]);
@@ -72,6 +71,7 @@ export default function ConversationsPage() {
 
     if (result.conversation) {
       setGeneratedConversation(result.conversation);
+      addConversationActivity(selectedLanguage, selectedWords, result.conversation); // Call client-side activity store
       toast({
         title: "Conversation Generated!",
         description: "Your new conversation is ready.",
@@ -236,3 +236,4 @@ export default function ConversationsPage() {
     </div>
   );
 }
+
