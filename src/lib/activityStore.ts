@@ -1,5 +1,13 @@
 
-// Ensure this code only runs on the client-side
+// src/lib/activityStore.ts
+
+// NOTE: With the introduction of Firestore for logged-in users, 
+// the role of this localStorage-based store is primarily for:
+// 1. Users who are not logged in.
+// 2. A potential quick-access cache if Firestore is slow or offline (though not explicitly implemented as such).
+// 3. Initial client-side rendering before Firestore data is loaded.
+// For logged-in users, Firestore (via userActivityService.ts and server actions) is the source of truth.
+
 "use client";
 
 export interface WordEntry {
@@ -12,7 +20,7 @@ export interface WordSetActivityRecord {
   type: 'wordSet';
   language: string;
   field: string;
-  wordEntries: WordEntry[]; // Changed from words: string[] and sentence: string
+  wordEntries: WordEntry[];
   timestamp: number;
 }
 
@@ -31,94 +39,87 @@ export interface ActivityData {
   learnedItems: ActivityRecord[];
 }
 
-const STORAGE_KEY = "linguaLeapActivity";
-
-function generateUniqueId(): string {
-  return Date.now().toString() + Math.random().toString(36).substring(2, 9);
+// This interface is primarily for local/fallback stats if Firestore is not used.
+export interface LearningStats {
+  totalWordsLearned: number;
+  fieldsCoveredCount: number;
+  wordSetsGenerated: number;
 }
 
-// Updated to accept wordEntries
+const STORAGE_KEY = "linguaLeapActivity_local"; // Suffix to differentiate if old keys exist
+
+function generateUniqueId(): string {
+  return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
+}
+
+/**
+ * Adds a word set activity to localStorage. 
+ * Primarily for non-logged-in users or as a fallback.
+ */
 export function addWordSetActivity(language: string, field: string, wordEntries: WordEntry[]): WordSetActivityRecord {
   if (typeof window === "undefined") {
-    // This case should ideally not be hit if called correctly from client components after server action.
-    // However, providing a fallback for SSR/build time if somehow invoked.
     const placeholderRecord: WordSetActivityRecord = {
-      id: generateUniqueId(),
-      type: 'wordSet',
-      language,
-      field,
-      wordEntries,
-      timestamp: Date.now()
+      id: generateUniqueId(), type: 'wordSet', language, field, wordEntries, timestamp: Date.now()
     };
-    console.warn("addWordSetActivity called in a non-client environment. Activity not saved to localStorage.");
+    console.warn("addWordSetActivity (local) called server-side.");
     return placeholderRecord;
   }
 
   const activityData = getActivityData();
   const newRecord: WordSetActivityRecord = {
-    id: generateUniqueId(),
-    type: 'wordSet',
-    language,
-    field,
-    wordEntries,
-    timestamp: Date.now(),
+    id: generateUniqueId(), type: 'wordSet', language, field, wordEntries, timestamp: Date.now(),
   };
   activityData.learnedItems.unshift(newRecord);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(activityData));
   return newRecord;
 }
 
+/**
+ * Adds a conversation activity to localStorage.
+ * Primarily for non-logged-in users or as a fallback.
+ */
 export function addConversationActivity(language: string, selectedWords: string[], conversation: string): ConversationActivityRecord {
    if (typeof window === "undefined") {
     const placeholderRecord: ConversationActivityRecord = {
-      id: generateUniqueId(),
-      type: 'conversation',
-      language,
-      selectedWords,
-      conversation,
-      timestamp: Date.now(),
+      id: generateUniqueId(), type: 'conversation', language, selectedWords, conversation, timestamp: Date.now(),
     };
-    console.warn("addConversationActivity called in a non-client environment. Activity not saved to localStorage.");
+    console.warn("addConversationActivity (local) called server-side.");
     return placeholderRecord;
   }
   const activityData = getActivityData();
   const newRecord: ConversationActivityRecord = {
-    id: generateUniqueId(),
-    type: 'conversation',
-    language,
-    selectedWords,
-    conversation,
-    timestamp: Date.now(),
+    id: generateUniqueId(), type: 'conversation', language, selectedWords, conversation, timestamp: Date.now(),
   };
   activityData.learnedItems.unshift(newRecord);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(activityData));
   return newRecord;
 }
 
-
+/**
+ * Retrieves activity data from localStorage.
+ * Primarily for non-logged-in users or as a fallback.
+ */
 export function getActivityData(): ActivityData {
-   if (typeof window === "undefined") {
-    return { learnedItems: [] };
-  }
+   if (typeof window === "undefined") return { learnedItems: [] };
+  
   const data = localStorage.getItem(STORAGE_KEY);
   if (data) {
     try {
       const parsedData = JSON.parse(data) as { learnedItems: Partial<ActivityRecord & { words?: string[], sentence?: string }>[] };
       if (Array.isArray(parsedData.learnedItems)) {
         const migratedItems: ActivityRecord[] = parsedData.learnedItems.map(item => {
-          if (!item) return null; // Skip null/undefined items
+          if (!item) return null; 
           if (!item.id) item.id = generateUniqueId();
           if (!item.timestamp) item.timestamp = Date.now();
 
           if (item.type === 'wordSet') {
-            // If old format (words array, single sentence), migrate to wordEntries
             if (Array.isArray((item as any).words) && typeof (item as any).sentence === 'string' && !item.wordEntries) {
               const oldWords = (item as any).words as string[];
               const oldSentence = (item as any).sentence as string;
-              (item as WordSetActivityRecord).wordEntries = oldWords.map(word => ({ word, sentence: oldSentence })); // Simplistic migration for old structure
+              (item as WordSetActivityRecord).wordEntries = oldWords.map(word => ({ word, sentence: oldSentence }));
               delete (item as any).words;
               delete (item as any).sentence;
-            } else if (!Array.isArray(item.wordEntries)) { // Ensure wordEntries is an array if type is wordSet
+            } else if (!Array.isArray(item.wordEntries)) {
                 (item as WordSetActivityRecord).wordEntries = [];
             }
             return item as WordSetActivityRecord;
@@ -130,15 +131,11 @@ export function getActivityData(): ActivityData {
                 conversation: (item as ConversationActivityRecord).conversation || "",
              } as ConversationActivityRecord;
           }
-          // If type is missing, assume it's an old wordSet and try to migrate
           if (!item.type && item.field && (item as any).words && Array.isArray((item as any).words) ) {
             const wordsArray = (item as any).words as string[];
-            const singleSentence = (item as any).sentence || "Sentence not available for this old record.";
+            const singleSentence = (item as any).sentence || "Sentence not available.";
             return {
-              id: item.id!,
-              type: 'wordSet',
-              language: item.language!,
-              field: item.field!,
+              id: item.id!, type: 'wordSet', language: item.language!, field: item.field!,
               wordEntries: wordsArray.map(w => ({word: w, sentence: singleSentence })),
               timestamp: item.timestamp!,
             } as WordSetActivityRecord;
@@ -149,19 +146,16 @@ export function getActivityData(): ActivityData {
         return { learnedItems: migratedItems };
       }
     } catch (error) {
-      console.error("Error parsing activity data from localStorage:", error);
+      console.error("Error parsing local activity data:", error);
     }
   }
   return { learnedItems: [] };
 }
 
-export interface LearningStats {
-  totalWordsLearned: number;
-  fieldsCoveredCount: number;
-  wordSetsGenerated: number;
-  // Future: add conversation stats if needed
-}
-
+/**
+ * Calculates learning stats from localStorage.
+ * Primarily for non-logged-in users or as a fallback.
+ */
 export function getStats(): LearningStats {
   if (typeof window === "undefined") {
     return { totalWordsLearned: 0, fieldsCoveredCount: 0, wordSetsGenerated: 0 };
@@ -185,4 +179,3 @@ export function getStats(): LearningStats {
     wordSetsGenerated: wordSetActivities.length,
   };
 }
-

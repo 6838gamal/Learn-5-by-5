@@ -1,18 +1,23 @@
 
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { 
-  getStats, 
+  getStats as getStatsLocal, 
+  getActivityData as getActivityDataLocal, 
   type LearningStats, 
   type ActivityRecord, 
   type WordSetActivityRecord,
   type ConversationActivityRecord,
-  type WordEntry,
-  getActivityData 
 } from "@/lib/activityStore";
-import { BarChart, BookOpenText, Layers, ListChecks, Clock, Volume2, FileText, MessageSquare } from "lucide-react";
+import { 
+  fetchUserActivitiesAction, 
+  fetchUserLearningStatsAction,
+  type FetchUserActivitiesResult,
+  type FetchUserLearningStatsResult
+} from "@/app/actions";
+import { BarChart, BookOpenText, Layers, ListChecks, Clock, Volume2, FileText, MessageSquare, Loader2, Unlock } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow } from 'date-fns';
 import StatCard from "./StatCard";
@@ -25,22 +30,61 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged, type User } from 'firebase/auth';
+import Link from "next/link";
 
 export default function DashboardClientPage() {
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [stats, setStats] = useState<LearningStats | null>(null);
   const [recentActivity, setRecentActivity] = useState<ActivityRecord[]>([]);
   const [isClient, setIsClient] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(true);
   const [selectedActivity, setSelectedActivity] = useState<ActivityRecord | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadDashboardData = useCallback(async (user: User | null) => {
+    setIsLoadingData(true);
+    setError(null);
+    if (user) { // Logged-in user: Fetch from Firestore
+      const [statsResult, activityResult] = await Promise.all([
+        fetchUserLearningStatsAction({ userId: user.uid }),
+        fetchUserActivitiesAction({ userId: user.uid, count: 10 })
+      ]);
+
+      if (statsResult.stats) {
+        setStats(statsResult.stats);
+      } else {
+        setError(statsResult.error || "Could not load learning statistics.");
+        setStats(getStatsLocal()); // Fallback to local if error
+      }
+
+      if (activityResult.activities) {
+        setRecentActivity(activityResult.activities);
+      } else {
+        setError(prevError => `${prevError || ""} ${activityResult.error || "Could not load recent activity."}`.trim());
+        setRecentActivity(getActivityDataLocal().learnedItems.slice(0, 10)); // Fallback
+      }
+    } else if (auth.app.options.apiKey !== "YOUR_API_KEY_HERE") { // Not logged in, real Firebase
+         setStats({ totalWordsLearned: 0, fieldsCoveredCount: 0, wordSetsGenerated: 0 });
+         setRecentActivity([]);
+    }
+     else { // Not logged in & test mode (or Firebase not configured): use localStorage
+      setStats(getStatsLocal());
+      setRecentActivity(getActivityDataLocal().learnedItems.slice(0, 10));
+    }
+    setIsLoadingData(false);
+  }, []);
 
   useEffect(() => {
     setIsClient(true);
-    if (typeof window !== "undefined") {
-      setStats(getStats());
-      const activityData = getActivityData();
-      setRecentActivity(activityData.learnedItems.slice(0, 10)); 
-    }
-  }, []);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      loadDashboardData(user);
+    });
+    return () => unsubscribe();
+  }, [loadDashboardData]);
 
   const handleActivityClick = (activity: ActivityRecord) => {
     setSelectedActivity(activity);
@@ -48,33 +92,54 @@ export default function DashboardClientPage() {
   };
 
   const handlePlaySentenceAudioInDialog = (sentence: string) => {
-    console.log(`Playing audio for sentence: ${sentence}`);
     alert(`Audio playback for the sentence is not yet implemented.`);
   };
   
   const handlePlayWordAudioInDialog = (word: string) => {
-    console.log(`Playing audio for word: ${word}`);
     alert(`Audio playback for the word is not yet implemented.`);
   };
 
-
-  if (!isClient) {
+  if (!isClient || isLoadingData) {
     return (
-      <div className="container mx-auto py-8">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="container mx-auto py-8 px-4 md:px-0">
+        <h1 className="text-3xl font-bold mb-8 text-primary text-center">Your Learning Dashboard</h1>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
           {[...Array(3)].map((_, i) => (
-             <Card key={i} className="shadow-lg"><CardHeader><div className="h-6 bg-muted rounded w-1/2"></div></CardHeader><CardContent><div className="h-10 bg-muted rounded w-3/4"></div></CardContent></Card>
+             <Card key={i} className="shadow-lg animate-pulse"><CardHeader><div className="h-6 bg-muted rounded w-1/2"></div></CardHeader><CardContent><div className="h-10 bg-muted rounded w-3/4"></div></CardContent></Card>
           ))}
         </div>
-         <Card className="mt-8 shadow-xl"><CardHeader><div className="h-8 bg-muted rounded w-1/3"></div></CardHeader><CardContent><div className="h-40 bg-muted rounded"></div></CardContent></Card>
+         <Card className="mt-8 shadow-xl animate-pulse"><CardHeader><div className="h-8 bg-muted rounded w-1/3"></div></CardHeader><CardContent><div className="h-40 bg-muted rounded flex items-center justify-center"><Loader2 className="h-10 w-10 text-primary animate-spin"/></div></CardContent></Card>
       </div>
     );
   }
 
-  if (!stats) {
+  if (!currentUser && auth.app.options.apiKey !== "YOUR_API_KEY_HERE" && isClient && !isLoadingData) {
+     return (
+      <div className="container mx-auto py-8 px-4">
+        <Card className="w-full max-w-md mx-auto shadow-xl">
+          <CardHeader className="items-center text-center">
+            <Unlock className="w-12 h-12 text-primary mb-3" />
+            <CardTitle className="text-2xl font-bold text-primary">Welcome to LinguaLeap!</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <p className="text-muted-foreground">Please log in to see your personalized dashboard and save your progress.</p>
+            <Button asChild>
+              <Link href="/auth/login">Go to Login</Link>
+            </Button>
+             <p className="text-xs text-muted-foreground mt-2">
+              (If you're in test mode with placeholder Firebase keys, some local data might be shown.)
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+
+  if (!stats) { // Should only happen briefly or if major error after loading
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-muted-foreground text-lg">Loading dashboard data...</p>
+        <p className="text-muted-foreground text-lg">Error loading dashboard data. {error}</p>
       </div>
     );
   }
@@ -240,11 +305,12 @@ export default function DashboardClientPage() {
     return null;
   };
 
-
   return (
     <div className="container mx-auto py-8 px-4 md:px-0">
       <h1 className="text-3xl font-bold mb-8 text-primary text-center">Your Learning Dashboard</h1>
       
+      {error && <Alert variant="destructive" className="mb-4"><AlertTriangle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
         <StatCard
           title="Total Words Learned"

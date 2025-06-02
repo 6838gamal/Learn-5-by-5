@@ -1,17 +1,24 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Mic, Volume2, Info, BookOpenText, FileText, Languages, Loader2, AlertTriangle } from "lucide-react";
+import { Mic, Volume2, Info, BookOpenText, FileText, Languages, Loader2, AlertTriangle, Unlock } from "lucide-react";
 import Link from "next/link";
-import { getActivityData, type WordSetActivityRecord, type WordEntry } from "@/lib/activityStore";
+import { 
+  getActivityData as getActivityDataLocal, 
+  type WordSetActivityRecord, 
+  type WordEntry 
+} from "@/lib/activityStore";
+import { fetchUserActivitiesAction, type FetchUserActivitiesResult } from "@/app/actions"; // Firestore action
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label"; // Added import
+import { Label } from "@/components/ui/label";
 import { LANGUAGES, type SelectionOption } from "@/constants/data";
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged, type User } from 'firebase/auth';
 
 interface DisplayableWordSoundEntry {
   word: string;
@@ -21,47 +28,95 @@ interface DisplayableWordSoundEntry {
 export default function SoundsPage() {
   const [displayableEntries, setDisplayableEntries] = useState<DisplayableWordSoundEntry[]>([]);
   const [isClient, setIsClient] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string>("");
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
-  useEffect(() => {
-    if (isClient && selectedLanguage) {
-      const activityData = getActivityData();
+  const loadSoundEntries = useCallback(async (language: string, user: User | null) => {
+    if (!isClient || !language) {
+      setDisplayableEntries([]);
+      setIsLoadingData(false);
+      return;
+    }
+    setIsLoadingData(true);
+    setError(null);
+    let processedEntries: DisplayableWordSoundEntry[] = [];
+
+    if (user) { // Logged-in: Fetch from Firestore
+      const result: FetchUserActivitiesResult = await fetchUserActivitiesAction({ userId: user.uid });
+      if (result.activities) {
+        const wordSentenceMap = new Map<string, { sentence: string | null, timestamp: number }>();
+        result.activities.forEach(record => {
+          if (record.type === 'wordSet' && record.language === language && (record as WordSetActivityRecord).wordEntries) {
+            (record as WordSetActivityRecord).wordEntries.forEach((entry: WordEntry) => {
+              if (!wordSentenceMap.has(entry.word) || record.timestamp > (wordSentenceMap.get(entry.word)?.timestamp || 0)) {
+                wordSentenceMap.set(entry.word, { sentence: entry.sentence, timestamp: record.timestamp });
+              }
+            });
+          }
+        });
+        processedEntries = Array.from(wordSentenceMap.entries()).map(([word, data]) => ({
+          word, sentence: data.sentence,
+        })).sort((a, b) => a.word.localeCompare(b.word));
+      } else if (result.error) {
+        setError(`Failed to load sound entries: ${result.error}`);
+        // Optionally fallback to local data here
+      }
+    } else if (auth.app.options.apiKey !== "YOUR_API_KEY_HERE") {
+        // Not logged in, Firebase configured - show empty or prompt to login
+    }
+    else { // Not logged-in or test mode: Use localStorage
+      const activityData = getActivityDataLocal();
       const wordSentenceMap = new Map<string, { sentence: string | null, timestamp: number }>();
-
       activityData.learnedItems.forEach(record => {
-        if (record.type === 'wordSet' && record.language === selectedLanguage && record.wordEntries) {
-          record.wordEntries.forEach((entry: WordEntry) => {
+        if (record.type === 'wordSet' && record.language === language && (record as WordSetActivityRecord).wordEntries) {
+          (record as WordSetActivityRecord).wordEntries.forEach((entry: WordEntry) => {
             if (!wordSentenceMap.has(entry.word) || record.timestamp > (wordSentenceMap.get(entry.word)?.timestamp || 0)) {
               wordSentenceMap.set(entry.word, { sentence: entry.sentence, timestamp: record.timestamp });
             }
           });
         }
       });
-      
-      const processedEntries: DisplayableWordSoundEntry[] = Array.from(wordSentenceMap.entries()).map(([word, data]) => ({
-        word,
-        sentence: data.sentence,
+      processedEntries = Array.from(wordSentenceMap.entries()).map(([word, data]) => ({
+        word, sentence: data.sentence,
       })).sort((a, b) => a.word.localeCompare(b.word));
-
-      setDisplayableEntries(processedEntries);
-    } else if (isClient && !selectedLanguage) {
-        setDisplayableEntries([]); // Clear entries if no language is selected
     }
-  }, [isClient, selectedLanguage]);
+    setDisplayableEntries(processedEntries);
+    setIsLoadingData(false);
+  }, [isClient]);
+
+  useEffect(() => {
+    setIsClient(true);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      if (selectedLanguage) {
+        loadSoundEntries(selectedLanguage, user);
+      } else {
+        setIsLoadingData(false); // No language selected, nothing to load yet
+      }
+    });
+    return () => unsubscribe();
+  }, [selectedLanguage, loadSoundEntries]);
+  
+  useEffect(() => { // Effect to trigger load when selectedLanguage changes
+    if (isClient && selectedLanguage) {
+      loadSoundEntries(selectedLanguage, currentUser);
+    } else if (isClient && !selectedLanguage) {
+      setDisplayableEntries([]); // Clear entries if no language is selected
+      setIsLoadingData(false);
+    }
+  }, [isClient, selectedLanguage, currentUser, loadSoundEntries]);
+
 
   const handlePlayWordAudio = (word: string) => {
-    console.log(`Playing audio for word: ${word}`);
-    alert(`Audio playback for "${word}" is not yet implemented. This feature will use Text-to-Speech in the future.`);
+    alert(`Audio playback for "${word}" is not yet implemented.`);
   };
 
   const handlePlaySentenceAudio = (sentence: string | null) => {
     if (!sentence) return;
-    console.log(`Playing audio for sentence: ${sentence}`);
-    alert(`Audio playback for the sentence "${sentence}" is not yet implemented. This feature will use Text-to-Speech in the future.`);
+    alert(`Audio playback for the sentence "${sentence}" is not yet implemented.`);
   };
   
   const languageDisplayNode = useMemo(() => {
@@ -78,7 +133,7 @@ export default function SoundsPage() {
   }, [isClient, selectedLanguage]);
 
 
-  if (!isClient) {
+  if (!isClient || (isLoadingData && selectedLanguage)) {
     return (
       <div className="container mx-auto py-8 px-4">
         <Card className="w-full max-w-3xl mx-auto shadow-xl">
@@ -98,6 +153,26 @@ export default function SoundsPage() {
       </div>
     );
   }
+  
+  if (!currentUser && auth.app.options.apiKey !== "YOUR_API_KEY_HERE" && isClient && !isLoadingData) {
+     return (
+      <div className="container mx-auto py-8 px-4">
+        <Card className="w-full max-w-md mx-auto shadow-xl">
+          <CardHeader className="items-center text-center">
+            <Unlock className="w-12 h-12 text-primary mb-3" />
+            <CardTitle className="text-2xl font-bold text-primary">Login Required</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <p className="text-muted-foreground">Please log in to practice with your learned words saved to your account.</p>
+            <Button asChild>
+              <Link href="/auth/login">Go to Login</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -120,7 +195,7 @@ export default function SoundsPage() {
             <Label htmlFor="language-select-sounds" className="text-base flex items-center gap-2 mb-2">
               <Languages className="w-5 h-5 text-primary" /> Select Language:
             </Label>
-            <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+            <Select value={selectedLanguage} onValueChange={setSelectedLanguage} disabled={isLoadingData}>
               <SelectTrigger id="language-select-sounds">
                 {languageDisplayNode}
               </SelectTrigger>
@@ -141,8 +216,10 @@ export default function SoundsPage() {
               </SelectContent>
             </Select>
           </div>
+          
+          {error && <Alert variant="destructive" className="mb-4"><AlertTriangle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
 
-          {!selectedLanguage && (
+          {!selectedLanguage && !isLoadingData && (
             <Alert variant="default" className="bg-secondary/30">
                 <Info className="h-5 w-5 text-primary" />
                 <AlertTitle>Select a Language</AlertTitle>
@@ -151,8 +228,14 @@ export default function SoundsPage() {
                 </AlertDescription>
             </Alert>
           )}
+          
+          {isLoadingData && selectedLanguage && (
+            <div className="h-[400px] flex items-center justify-center">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            </div>
+          )}
 
-          {selectedLanguage && displayableEntries.length > 0 && (
+          {!isLoadingData && selectedLanguage && displayableEntries.length > 0 && (
             <>
               <Alert className="mb-6 bg-secondary/30">
                 <Info className="h-5 w-5 text-primary" />
@@ -207,7 +290,7 @@ export default function SoundsPage() {
             </>
           )}
           
-          {selectedLanguage && displayableEntries.length === 0 && (
+          {!isLoadingData && selectedLanguage && displayableEntries.length === 0 && !error && (
              <Alert variant="default" className="bg-secondary/30">
                 <AlertTriangle className="h-4 w-4 text-primary" />
                 <AlertTitle>No Words Yet for {LANGUAGES.find(l => l.value === selectedLanguage)?.label || selectedLanguage}</AlertTitle>
@@ -228,4 +311,3 @@ export default function SoundsPage() {
     </div>
   );
 }
-

@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,15 +9,29 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { MessageCircle, Languages, ListChecks, AlertTriangle, Wand2, Loader2 } from "lucide-react";
-import { getActivityData, type WordSetActivityRecord, addConversationActivity } from "@/lib/activityStore"; // Added addConversationActivity
+import { MessageCircle, Languages, ListChecks, AlertTriangle, Wand2, Loader2, Unlock } from "lucide-react";
+import { 
+  getActivityData as getActivityDataLocal, 
+  addConversationActivity as addConversationActivityLocal,
+  type WordSetActivityRecord 
+} from "@/lib/activityStore";
 import { LANGUAGES, type SelectionOption } from "@/constants/data";
-import { handleGenerateConversation, type GenerateConversationActionResult } from "@/app/actions";
+import { 
+  handleGenerateConversation, 
+  type GenerateConversationActionResult,
+  logConversationActivityAction, // New action for Firestore
+  fetchUserActivitiesAction // New action for Firestore
+} from "@/app/actions";
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged, type User } from 'firebase/auth';
 
 export default function ConversationsPage() {
   const [isClient, setIsClient] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isDataLoading, setIsDataLoading] = useState(true); // For initial data fetch
+
   const [selectedLanguage, setSelectedLanguage] = useState<string>("");
   const [languageWords, setLanguageWords] = useState<string[]>([]);
   const [selectedWords, setSelectedWords] = useState<string[]>([]);
@@ -28,26 +42,69 @@ export default function ConversationsPage() {
 
   useEffect(() => {
     setIsClient(true);
-  }, []);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      // When auth state changes, if a language is selected, reload words.
+      // If no language is selected yet, loadWords will be called by selectedLanguage effect.
+      if (selectedLanguage) {
+         loadWordsForLanguage(selectedLanguage, user);
+      } else {
+         setIsDataLoading(false); // No language, no data to load initially
+      }
+    });
+    return () => unsubscribe();
+  }, [selectedLanguage]); // Re-run if selectedLanguage changes, user will be current
 
-  useEffect(() => {
-    if (isClient && selectedLanguage) {
-      const activityData = getActivityData();
-      const wordsSet = new Set<string>();
-      activityData.learnedItems.forEach(record => {
-        if (record.language === selectedLanguage && record.type === 'wordSet') {
-          (record as WordSetActivityRecord).words.forEach(word => wordsSet.add(word));
-        }
-      });
-      setLanguageWords(Array.from(wordsSet).sort());
-      setSelectedWords([]); 
-      setGeneratedConversation(null); 
-      setError(null);
-    } else {
+  const loadWordsForLanguage = useCallback(async (language: string, user: User | null) => {
+    if (!isClient || !language) {
       setLanguageWords([]);
       setSelectedWords([]);
+      setIsDataLoading(false);
+      return;
     }
-  }, [isClient, selectedLanguage]);
+    
+    setIsDataLoading(true);
+    let wordsSet = new Set<string>();
+
+    if (user) { // Logged-in user: Fetch from Firestore
+      const result = await fetchUserActivitiesAction({ userId: user.uid });
+      if (result.activities) {
+        result.activities.forEach(record => {
+          if (record.type === 'wordSet' && record.language === language) {
+            (record as WordSetActivityRecord).wordEntries.forEach(entry => wordsSet.add(entry.word));
+          }
+        });
+      } else if (result.error) {
+        setError("Could not load your learned words. Using local data if available.");
+        // Fallback or use local data can be added here
+      }
+    } else if (auth.app.options.apiKey !== "YOUR_API_KEY_HERE") { // Not logged in, Firebase configured (not test mode)
+        // Show message or rely on local if desired
+    } else { // Not logged-in or test mode without real Firebase: use localStorage
+      const activityData = getActivityDataLocal();
+      activityData.learnedItems.forEach(record => {
+        if (record.type === 'wordSet' && record.language === language) {
+          (record as WordSetActivityRecord).wordEntries.forEach(entry => wordsSet.add(entry.word));
+        }
+      });
+    }
+
+    setLanguageWords(Array.from(wordsSet).sort());
+    setSelectedWords([]); 
+    setGeneratedConversation(null); 
+    setError(null);
+    setIsDataLoading(false);
+  }, [isClient]);
+
+  useEffect(() => {
+    if (selectedLanguage) {
+        loadWordsForLanguage(selectedLanguage, currentUser);
+    } else {
+        setLanguageWords([]);
+        setSelectedWords([]);
+    }
+  }, [selectedLanguage, currentUser, loadWordsForLanguage]);
+
 
   const handleWordSelection = (word: string) => {
     setSelectedWords(prev =>
@@ -69,13 +126,29 @@ export default function ConversationsPage() {
       selectedWords: selectedWords,
     });
 
-    if (result.conversation) {
+    setIsLoadingConversation(false);
+
+    if (result.conversation && result.language && result.selectedWords) {
       setGeneratedConversation(result.conversation);
-      addConversationActivity(selectedLanguage, selectedWords, result.conversation); // Call client-side activity store
       toast({
         title: "Conversation Generated!",
         description: "Your new conversation is ready.",
       });
+
+      if (currentUser) {
+        const logResult = await logConversationActivityAction({
+          userId: currentUser.uid,
+          language: result.language,
+          selectedWords: result.selectedWords,
+          conversation: result.conversation,
+        });
+        if (!logResult.success) {
+          toast({ variant: "destructive", title: "Logging Failed", description: "Could not save conversation to your account."});
+        }
+      } else {
+         addConversationActivityLocal(result.language, result.selectedWords, result.conversation);
+         toast({ title: "Activity Saved Locally", description: "Log in to save progress to your account."});
+      }
     } else if (result.error) {
       setError(result.error);
       toast({
@@ -84,7 +157,6 @@ export default function ConversationsPage() {
         description: result.error,
       });
     }
-    setIsLoadingConversation(false);
   };
   
   const languageDisplayNode = useMemo(() => {
@@ -100,7 +172,7 @@ export default function ConversationsPage() {
     return <SelectValue placeholder="Choose a language..." />;
   }, [isClient, selectedLanguage]);
 
-  if (!isClient) {
+  if (!isClient || (isDataLoading && selectedLanguage)) { // Show main loader if client not ready OR if data is loading for a selected language
     return (
        <div className="container mx-auto py-8 px-4">
         <Card className="w-full max-w-2xl mx-auto shadow-xl">
@@ -116,6 +188,26 @@ export default function ConversationsPage() {
       </div>
     );
   }
+  
+  if (!currentUser && auth.app.options.apiKey !== "YOUR_API_KEY_HERE" && isClient) {
+     return (
+      <div className="container mx-auto py-8 px-4">
+        <Card className="w-full max-w-md mx-auto shadow-xl">
+          <CardHeader className="items-center text-center">
+            <Unlock className="w-12 h-12 text-primary mb-3" />
+            <CardTitle className="text-2xl font-bold text-primary">Login Required</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <p className="text-muted-foreground">Please log in to practice conversations and save your progress to your account.</p>
+            <Button asChild>
+              <Link href="/auth/login">Go to Login</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -134,7 +226,7 @@ export default function ConversationsPage() {
             <Label htmlFor="language-select" className="text-base flex items-center gap-2 mb-2">
               <Languages className="w-5 h-5 text-primary" /> Select Language:
             </Label>
-            <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+            <Select value={selectedLanguage} onValueChange={setSelectedLanguage} disabled={isLoadingConversation || isDataLoading}>
               <SelectTrigger id="language-select">
                 {languageDisplayNode}
               </SelectTrigger>
@@ -161,7 +253,11 @@ export default function ConversationsPage() {
               <Label className="text-base flex items-center gap-2 mb-2">
                 <ListChecks className="w-5 h-5 text-primary" /> Select Words (min. 2):
               </Label>
-              {languageWords.length > 0 ? (
+              {isDataLoading ? (
+                <div className="h-48 w-full rounded-md border p-4 flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : languageWords.length > 0 ? (
                 <ScrollArea className="h-48 w-full rounded-md border p-4">
                   <div className="space-y-2">
                     {languageWords.map(word => (
@@ -170,6 +266,7 @@ export default function ConversationsPage() {
                           id={`word-${word}`}
                           checked={selectedWords.includes(word)}
                           onCheckedChange={() => handleWordSelection(word)}
+                          disabled={isLoadingConversation}
                         />
                         <Label htmlFor={`word-${word}`} className="font-normal text-sm">
                           {word}
@@ -193,7 +290,7 @@ export default function ConversationsPage() {
 
           <Button
             onClick={onGenerateConversation}
-            disabled={isLoadingConversation || !selectedLanguage || selectedWords.length < 2}
+            disabled={isLoadingConversation || !selectedLanguage || selectedWords.length < 2 || isDataLoading}
             className="w-full bg-accent hover:bg-accent/90 text-accent-foreground text-lg py-3"
           >
             {isLoadingConversation ? (
@@ -236,4 +333,3 @@ export default function ConversationsPage() {
     </div>
   );
 }
-

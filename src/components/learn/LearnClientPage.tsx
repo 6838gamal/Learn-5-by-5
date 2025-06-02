@@ -23,10 +23,14 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LANGUAGES, FIELDS, type SelectionOption } from "@/constants/data";
-import { handleGenerateWordSet, type GenerateWordSetActionResult } from "@/app/actions";
-import { addWordSetActivity, type WordEntry } from "@/lib/activityStore"; // Still used for client-side logging if needed, or will be replaced
-import { getNumberOfWordsSettingAction } from '@/app/settingsActions'; // Import Firestore-backed setting getter
-import type { NumberOfWordsSetting } from '@/lib/userSettingsService'; // Import type
+import { 
+  handleGenerateWordSet, 
+  type GenerateWordSetActionResult,
+  logWordSetActivityAction // New action for Firestore
+} from "@/app/actions";
+import { addWordSetActivity as addWordSetActivityLocal, type WordEntry } from "@/lib/activityStore"; // Keep for non-logged in if needed
+import { getNumberOfWordsSettingAction } from '@/app/settingsActions';
+import type { NumberOfWordsSetting } from '@/lib/userSettingsService';
 import { useToast } from "@/hooks/use-toast";
 import { Wand2, AlertTriangle, Languages, Lightbulb, Volume2, FileText, SpellCheck, BookOpenText, Home, Loader2, Unlock } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -51,8 +55,8 @@ type LearnFormValues = z.infer<typeof learnFormSchema>;
 
 export default function LearnClientPage() {
   const [generatedWordEntries, setGeneratedWordEntries] = useState<WordEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(false); // For AI generation
-  const [isSettingsLoading, setIsSettingsLoading] = useState(true); // For loading settings
+  const [isLoading, setIsLoading] = useState(false); 
+  const [isSettingsLoading, setIsSettingsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const router = useRouter();
@@ -67,41 +71,33 @@ export default function LearnClientPage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
+      setIsSettingsLoading(true); // Start loading settings when auth state changes
       if (user) {
-        setIsSettingsLoading(true);
         try {
           const numWords = await getNumberOfWordsSettingAction(user.uid);
           setCurrentWordsToGenerate(numWords);
         } catch (e) {
           console.error("Failed to load number of words setting:", e);
           toast({ variant: "destructive", title: "Could not load settings", description: "Using default word count." });
-          // Fallback to default if Firestore fetch fails
           setCurrentWordsToGenerate(5);
-        } finally {
-          setIsSettingsLoading(false);
         }
       } else {
-        // Not logged in, use default or show message
-        setCurrentWordsToGenerate(5); // Default for non-logged-in users
-        setIsSettingsLoading(false);
+        // For non-logged-in users, use local setting or default
+        // For now, just default if settingsStore is not used for anonymous
+        setCurrentWordsToGenerate(5); 
       }
+      setIsSettingsLoading(false);
     });
     return () => unsubscribe();
   }, [toast]);
 
   useEffect(() => {
-    if (!carouselApi) {
-      return
-    }
-    setCurrentCarouselIndex(carouselApi.selectedScrollSnap()) 
-    const onSelect = () => {
-      setCurrentCarouselIndex(carouselApi.selectedScrollSnap())
-    };
+    if (!carouselApi) return;
+    setCurrentCarouselIndex(carouselApi.selectedScrollSnap());
+    const onSelect = () => setCurrentCarouselIndex(carouselApi.selectedScrollSnap());
     carouselApi.on("select", onSelect);
-    return () => {
-      carouselApi.off("select", onSelect);
-    };
-  }, [carouselApi])
+    return () => carouselApi.off("select", onSelect);
+  }, [carouselApi]);
 
   useEffect(() => {
     if (generatedWordEntries.length > 0 && currentCarouselIndex < generatedWordEntries.length) {
@@ -119,19 +115,14 @@ export default function LearnClientPage() {
     }
   }, [selectedWordEntry]);
 
-
   const form = useForm<LearnFormValues>({
     resolver: zodResolver(learnFormSchema),
-    defaultValues: {
-      language: "",
-      field: "",
-    },
+    defaultValues: { language: "", field: "" },
   });
 
   async function onSubmit(data: LearnFormValues) {
-    if (!currentUser && auth.app.options.apiKey !== "YOUR_API_KEY_HERE") { // Check if not in test mode without Firebase
+    if (!currentUser && auth.app.options.apiKey !== "YOUR_API_KEY_HERE") {
        toast({ variant: "destructive", title: "Login Required", description: "Please log in to generate and save words." });
-       // Potentially disable form or redirect
        return;
     }
 
@@ -141,13 +132,10 @@ export default function LearnClientPage() {
     setSelectedWordEntry(null);
     setSplitWordView([]);
     setCurrentCarouselIndex(0);
-    if (carouselApi) {
-        carouselApi.scrollTo(0, true); 
-    }
+    if (carouselApi) carouselApi.scrollTo(0, true); 
 
-    // Fetch current count setting for the logged-in user, or use default
-    let countToGenerate = currentWordsToGenerate; // Use state which is updated on auth change
-    if (currentUser) {
+    let countToGenerate = currentWordsToGenerate;
+    if (currentUser && !isSettingsLoading) { // Ensure settings are loaded before using them
       try {
         countToGenerate = await getNumberOfWordsSettingAction(currentUser.uid);
       } catch (e) {
@@ -160,27 +148,32 @@ export default function LearnClientPage() {
       count: countToGenerate,
     });
 
+    setIsLoading(false); // Set loading to false after AI generation attempt
+
     if (result.wordEntries && result.wordEntries.length > 0 && result.language && result.field) {
       setGeneratedWordEntries(result.wordEntries);
-      if (result.wordEntries.length > 0) {
-        setSelectedWordEntry(result.wordEntries[0]); 
-      }
-      // TODO: Migrate addWordSetActivity to Firestore if user is logged in.
-      // For now, it still uses localStorage.
-      if (currentUser) {
-        // If you have a Firestore-based activity logger:
-        // await logWordSetActivityToFirestore(currentUser.uid, result.language, result.field, result.wordEntries);
-        console.log("User is logged in. TODO: Log activity to Firestore.");
-         addWordSetActivity(result.language, result.field, result.wordEntries); // Keep local for now or replace
-      } else {
-        // For non-logged-in users or if Firestore logging isn't ready, use localStorage
-        addWordSetActivity(result.language, result.field, result.wordEntries);
-      }
+      if (result.wordEntries.length > 0) setSelectedWordEntry(result.wordEntries[0]); 
       
       toast({
         title: "Word Entries Generated!",
         description: `A new set of ${result.wordEntries.length} items for ${data.field} in ${data.language} is ready.`,
       });
+
+      if (currentUser) {
+        const logResult = await logWordSetActivityAction({
+          userId: currentUser.uid,
+          language: result.language,
+          field: result.field,
+          wordEntries: result.wordEntries,
+        });
+        if (!logResult.success) {
+          toast({ variant: "destructive", title: "Logging Failed", description: "Could not save activity to your account." });
+        }
+      } else {
+        // Fallback for non-logged-in users (optional, could be removed)
+        addWordSetActivityLocal(result.language, result.field, result.wordEntries);
+        toast({ title: "Activity Saved Locally", description: "Log in to save progress to your account."});
+      }
     } else if (result.error) {
       setError(result.error);
       toast({
@@ -189,40 +182,30 @@ export default function LearnClientPage() {
         description: result.error,
       });
     }
-    setIsLoading(false);
   }
   
   const handlePlayWordAudio = (word: string | null) => {
     if (!word) return;
-    console.log(`Playing audio for word: ${word}`);
-    alert(`Audio playback for "${word}" is not yet implemented. This feature will use Text-to-Speech in the future.`);
+    alert(`Audio playback for "${word}" is not yet implemented.`);
   };
 
   const handlePlaySentenceAudio = (sentence: string | null) => {
     if(!sentence) return;
-    console.log(`Playing audio for sentence: ${sentence}`);
-    alert(`Audio playback for the sentence "${sentence}" is not yet implemented. This feature will use Text-to-Speech in the future.`);
+    alert(`Audio playback for the sentence "${sentence}" is not yet implemented.`);
   };
 
-  const handleGoToHome = () => {
-    router.push("/");
-  };
+  const handleGoToHome = () => router.push("/");
 
   let languageDisplayNode: React.ReactNode;
   const selectedLanguageValue = form.watch("language");
-  if (selectedLanguageValue) {
-    const selectedLanguageOption = LANGUAGES.find((lang: SelectionOption) => lang.value === selectedLanguageValue);
-    languageDisplayNode = (
-      <div className="flex items-center gap-2">
-        {selectedLanguageOption?.emoji && <span className="text-xl">{selectedLanguageOption.emoji}</span>}
-        <span>{selectedLanguageOption ? selectedLanguageOption.label : "Choose a language..."}</span>
-      </div>
-    );
-  } else {
-    languageDisplayNode = <SelectValue placeholder="Choose a language..." />;
-  }
+  languageDisplayNode = LANGUAGES.find((lang: SelectionOption) => lang.value === selectedLanguageValue) ? (
+    <div className="flex items-center gap-2">
+      <span className="text-xl">{LANGUAGES.find(l => l.value === selectedLanguageValue)?.emoji}</span>
+      <span>{LANGUAGES.find(l => l.value === selectedLanguageValue)?.label}</span>
+    </div>
+  ) : <SelectValue placeholder="Choose a language..." />;
   
-  if (isSettingsLoading) {
+  if (isSettingsLoading && auth.app.options.apiKey !== "YOUR_API_KEY_HERE") {
      return (
       <div className="container mx-auto py-8 px-4">
         <Card className="w-full max-w-2xl mx-auto shadow-xl">
@@ -239,7 +222,6 @@ export default function LearnClientPage() {
     );
   }
   
-  // If not logged in and Firebase is configured (not in test placeholder mode)
   if (!currentUser && auth.app.options.apiKey !== "YOUR_API_KEY_HERE" && !isSettingsLoading) {
      return (
       <div className="container mx-auto py-8 px-4">
@@ -249,7 +231,7 @@ export default function LearnClientPage() {
             <CardTitle className="text-2xl font-bold text-primary">Login Required</CardTitle>
           </CardHeader>
           <CardContent className="text-center space-y-4">
-            <p className="text-muted-foreground">Please log in to generate words and save your progress.</p>
+            <p className="text-muted-foreground">Please log in to generate words and save your progress to your account.</p>
             <Button asChild>
               <Link href="/auth/login">Go to Login</Link>
             </Button>
@@ -258,7 +240,6 @@ export default function LearnClientPage() {
       </div>
     );
   }
-
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-0">
@@ -272,8 +253,11 @@ export default function LearnClientPage() {
           </div>
           <CardDescription className="text-center text-lg">
             Select language and field to generate {currentWordsToGenerate} words, each with an example sentence.
-            {currentUser && ( // Only show link if user is logged in to access settings
+            {currentUser && (
                 <> (<Link href="/settings" className="underline text-primary hover:text-accent">Change count in settings</Link>)</>
+            )}
+            {!currentUser && auth.app.options.apiKey !== "YOUR_API_KEY_HERE" && (
+                 <span className="block text-sm">Log in to customize word count.</span>
             )}
           </CardDescription>
         </CardHeader>
@@ -286,7 +270,7 @@ export default function LearnClientPage() {
                 render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-base flex items-center gap-2"><Languages className="w-5 h-5 text-primary" /> Language</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || ""} defaultValue={field.value} disabled={isLoading}>
+                      <Select onValueChange={field.onChange} value={field.value || ""} defaultValue={field.value} disabled={isLoading || isSettingsLoading}>
                         <FormControl>
                           <SelectTrigger>
                             {languageDisplayNode}
@@ -319,7 +303,7 @@ export default function LearnClientPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-base flex items-center gap-2"><Lightbulb className="w-5 h-5 text-primary"/> Field of Knowledge</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading || isSettingsLoading}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Choose a field..." />
@@ -365,7 +349,7 @@ export default function LearnClientPage() {
           )}
           
           <div className="mt-8">
-            {isLoading && ( // This is for AI generation loading
+            {isLoading && (
               <div>
                 <Skeleton className="h-24 w-full mb-4" /> 
                 <Skeleton className="h-12 w-1/2 mx-auto mb-2" /> 

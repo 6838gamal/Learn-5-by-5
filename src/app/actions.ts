@@ -5,12 +5,17 @@
 import { generateWordSet, type GenerateWordSetInput, type GenerateWordSetOutput } from "@/ai/flows/generate-word-set";
 import { generateConversation, type GenerateConversationInput, type GenerateConversationOutput } from "@/ai/flows/generate-conversation-flow";
 import { z } from "zod";
-import type { WordEntry } from "@/lib/activityStore"; 
+import type { WordEntry, WordSetActivityRecord, ConversationActivityRecord, LearningStats, ActivityRecord } from "@/lib/activityStore"; 
+import { 
+  addActivityToFirestore, 
+  getActivitiesFromFirestore,
+  getLearningStatsFromFirestore
+} from "@/lib/userActivityService";
 
 const WordSetActionInputSchema = z.object({
   language: z.string().min(1, "Language is required."),
   field: z.string().min(1, "Field is required."),
-  count: z.number().min(3).max(5).optional().default(5), // Added count
+  count: z.number().min(3).max(5).optional().default(5),
 });
 
 export interface GenerateWordSetActionResult {
@@ -18,25 +23,22 @@ export interface GenerateWordSetActionResult {
   error?: string;
   language?: string; 
   field?: string;    
-  count?: number; // Pass back count for client-side activity logging
+  count?: number; 
 }
 
 export async function handleGenerateWordSet(
-  data: GenerateWordSetInput // This already includes count
+  data: GenerateWordSetInput
 ): Promise<GenerateWordSetActionResult> {
   try {
-    // The input 'data' to this function now matches GenerateWordSetInput from the flow,
-    // which already includes an optional 'count' that defaults in the flow's schema if not provided.
-    // So, we parse against that directly or ensure the Zod schema used here is compatible.
     const validatedData = WordSetActionInputSchema.parse(data); 
-    const result: GenerateWordSetOutput = await generateWordSet(validatedData); // Pass validatedData (which has count)
+    const result: GenerateWordSetOutput = await generateWordSet(validatedData); 
     
     if (result.wordEntries && result.wordEntries.length > 0) {
       return { 
         wordEntries: result.wordEntries, 
         language: validatedData.language, 
         field: validatedData.field,
-        count: validatedData.count // Return the count used
+        count: validatedData.count 
       };
     }
     return { error: "No word entries were generated. Please try again." };
@@ -90,5 +92,94 @@ export async function handleGenerateConversation(
         errorMessage = e.message;
     }
     return { error: errorMessage };
+  }
+}
+
+// --- New Actions for Firestore Activity Logging and Fetching ---
+
+const LogWordSetActivityInputSchema = z.object({
+  userId: z.string().min(1, "User ID is required."),
+  language: z.string().min(1, "Language is required."),
+  field: z.string().min(1, "Field is required."),
+  wordEntries: z.array(z.object({ word: z.string(), sentence: z.string() })).min(1, "Word entries are required."),
+});
+export type LogWordSetActivityInput = z.infer<typeof LogWordSetActivityInputSchema>;
+
+export async function logWordSetActivityAction(data: LogWordSetActivityInput): Promise<{ success: boolean; error?: string }> {
+  try {
+    const validatedData = LogWordSetActivityInputSchema.parse(data);
+    const activityToSave: Omit<WordSetActivityRecord, 'id' | 'timestamp'> = {
+      type: 'wordSet',
+      language: validatedData.language,
+      field: validatedData.field,
+      wordEntries: validatedData.wordEntries,
+    };
+    await addActivityToFirestore(validatedData.userId, activityToSave);
+    return { success: true };
+  } catch (e) {
+    console.error("Error logging word set activity:", e);
+    return { success: false, error: e instanceof Error ? e.message : "Failed to log activity." };
+  }
+}
+
+const LogConversationActivityInputSchema = z.object({
+  userId: z.string().min(1, "User ID is required."),
+  language: z.string().min(1, "Language is required."),
+  selectedWords: z.array(z.string()).min(2, "At least two words are required."),
+  conversation: z.string().min(1, "Conversation script is required."),
+});
+export type LogConversationActivityInput = z.infer<typeof LogConversationActivityInputSchema>;
+
+export async function logConversationActivityAction(data: LogConversationActivityInput): Promise<{ success: boolean; error?: string }> {
+  try {
+    const validatedData = LogConversationActivityInputSchema.parse(data);
+    const activityToSave: Omit<ConversationActivityRecord, 'id' | 'timestamp'> = {
+      type: 'conversation',
+      language: validatedData.language,
+      selectedWords: validatedData.selectedWords,
+      conversation: validatedData.conversation,
+    };
+    await addActivityToFirestore(validatedData.userId, activityToSave);
+    return { success: true };
+  } catch (e) {
+    console.error("Error logging conversation activity:", e);
+    return { success: false, error: e instanceof Error ? e.message : "Failed to log activity." };
+  }
+}
+
+const FetchUserActivitiesInputSchema = z.object({
+  userId: z.string().min(1, "User ID is required."),
+  count: z.number().optional(),
+});
+export interface FetchUserActivitiesResult {
+  activities?: ActivityRecord[];
+  error?: string;
+}
+export async function fetchUserActivitiesAction(data: {userId: string, count?: number}): Promise<FetchUserActivitiesResult> {
+  try {
+    const validatedData = FetchUserActivitiesInputSchema.parse(data);
+    const activities = await getActivitiesFromFirestore(validatedData.userId, validatedData.count);
+    return { activities };
+  } catch (e) {
+    console.error("Error fetching user activities:", e);
+    return { error: e instanceof Error ? e.message : "Failed to fetch activities." };
+  }
+}
+
+const FetchUserLearningStatsInputSchema = z.object({
+  userId: z.string().min(1, "User ID is required."),
+});
+export interface FetchUserLearningStatsResult {
+  stats?: LearningStats;
+  error?: string;
+}
+export async function fetchUserLearningStatsAction(data: {userId: string}): Promise<FetchUserLearningStatsResult> {
+  try {
+    const validatedData = FetchUserLearningStatsInputSchema.parse(data);
+    const stats = await getLearningStatsFromFirestore(validatedData.userId);
+    return { stats };
+  } catch (e) {
+    console.error("Error fetching user learning stats:", e);
+    return { error: e instanceof Error ? e.message : "Failed to fetch learning stats." };
   }
 }
