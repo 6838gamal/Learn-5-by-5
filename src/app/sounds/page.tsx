@@ -10,6 +10,7 @@ import { getActivityData, type WordSetActivityRecord, type WordEntry } from "@/l
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label"; // Added import
 import { LANGUAGES, type SelectionOption } from "@/constants/data";
 
 interface DisplayableWordSoundEntry {
