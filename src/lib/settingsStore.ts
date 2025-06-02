@@ -2,7 +2,7 @@
 "use client";
 
 export type NumberOfWordsSetting = 3 | 5;
-export type AppLanguageSetting = "en" | "es" | "fr"; // Example languages
+export type AppLanguageSetting = "en" | "es" | "fr" | "ar"; // Example languages, added "ar"
 
 const NUMBER_OF_WORDS_KEY = "linguaLeapNumberOfWords";
 const APP_LANGUAGE_KEY = "linguaLeapAppLanguage";
@@ -31,7 +31,7 @@ export function getAppLanguageSetting(): AppLanguageSetting {
   }
   const storedValue = localStorage.getItem(APP_LANGUAGE_KEY) as AppLanguageSetting | null;
   // Add more supported languages to this check if needed
-  if (storedValue && ["en", "es", "fr"].includes(storedValue)) {
+  if (storedValue && ["en", "es", "fr", "ar"].includes(storedValue)) { // Added "ar"
     return storedValue;
   }
   return "en"; // Default if not set or invalid

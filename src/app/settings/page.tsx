@@ -135,6 +135,7 @@ export default function SettingsPage() {
                 <SelectItem value="en">English (Default)</SelectItem>
                 <SelectItem value="es">Español (Spanish - Conceptual)</SelectItem>
                 <SelectItem value="fr">Français (French - Conceptual)</SelectItem>
+                <SelectItem value="ar">العربية (Arabic - Conceptual)</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-sm text-muted-foreground">
