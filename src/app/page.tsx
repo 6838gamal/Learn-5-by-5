@@ -1,5 +1,7 @@
-import HomePageClient from "@/components/home/HomePageClient";
+
+import DashboardClientPage from "@/components/dashboard/DashboardClientPage";
 
 export default function HomePage() {
-  return <HomePageClient />;
+  // The root page will now display the dashboard content.
+  return <DashboardClientPage />;
 }

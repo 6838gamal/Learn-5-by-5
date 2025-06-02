@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { 
   Home, 
-  LayoutDashboard, 
+  // LayoutDashboard, // Removed as Dashboard is now Home
   Menu, 
   StepForward, 
   Mic, 
@@ -94,14 +94,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   };
 
   const navItems: NavItemProps[] = [
-    { href: "/", icon: Home, label: "Home" },
+    { href: "/", icon: Home, label: "Home" }, // Home now points to the dashboard
     { href: "/sounds", icon: Mic, label: "Sounds" },
     { href: "/words", icon: Type, label: "Words" },
     { href: "/exercises", icon: ClipboardList, label: "Exercises" },
     { href: "/conversations", icon: MessagesSquare, label: "Conversations" },
     { href: "/exams", icon: Award, label: "Exams" },
     { href: "/settings", icon: SettingsIcon, label: "Settings" },
-    { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+    // { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" }, // Removed Dashboard link
     { label: "Logout", icon: LogOut, onClick: handleLogout },
   ];
 
