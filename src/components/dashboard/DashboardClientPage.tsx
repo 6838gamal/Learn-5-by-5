@@ -17,7 +17,7 @@ import {
   type FetchUserActivitiesResult,
   type FetchUserLearningStatsResult
 } from "@/app/actions";
-import { BarChart, BookOpenText, Layers, ListChecks, Clock, Volume2, FileText, MessageSquare, Loader2, Unlock } from "lucide-react";
+import { BarChart, BookOpenText, Layers, ListChecks, Clock, Volume2, FileText, MessageSquare, Loader2, Unlock, Languages } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow } from 'date-fns';
 import StatCard from "./StatCard";
@@ -33,6 +33,9 @@ import { Button } from "@/components/ui/button";
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import Link from "next/link";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertTriangle } from "lucide-react";
+
 
 export default function DashboardClientPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -67,7 +70,7 @@ export default function DashboardClientPage() {
         setRecentActivity(getActivityDataLocal().learnedItems.slice(0, 10)); // Fallback
       }
     } else if (auth.app.options.apiKey !== "YOUR_API_KEY_HERE") { // Not logged in, real Firebase
-         setStats({ totalWordsLearned: 0, fieldsCoveredCount: 0, wordSetsGenerated: 0 });
+         setStats({ totalWordsLearned: 0, fieldsCoveredCount: 0, wordSetsGenerated: 0, languagesCoveredCount: 0 });
          setRecentActivity([]);
     }
      else { // Not logged in & test mode (or Firebase not configured): use localStorage
@@ -103,8 +106,8 @@ export default function DashboardClientPage() {
     return (
       <div className="container mx-auto py-8 px-4 md:px-0">
         <h1 className="text-3xl font-bold mb-8 text-primary text-center">Your Learning Dashboard</h1>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
-          {[...Array(3)].map((_, i) => (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+          {[...Array(4)].map((_, i) => (
              <Card key={i} className="shadow-lg animate-pulse"><CardHeader><div className="h-6 bg-muted rounded w-1/2"></div></CardHeader><CardContent><div className="h-10 bg-muted rounded w-3/4"></div></CardContent></Card>
           ))}
         </div>
@@ -311,12 +314,18 @@ export default function DashboardClientPage() {
       
       {error && <Alert variant="destructive" className="mb-4"><AlertTriangle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
         <StatCard
           title="Total Words Learned"
           value={stats.totalWordsLearned.toString()}
           icon={ListChecks}
           description="Unique words from generated word sets."
+        />
+        <StatCard
+          title="Languages Explored"
+          value={stats.languagesCoveredCount.toString()}
+          icon={Languages}
+          description="Unique languages you've generated words in."
         />
         <StatCard
           title="Fields Explored"

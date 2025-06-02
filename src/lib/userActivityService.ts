@@ -19,7 +19,7 @@ import type {
   WordSetActivityRecord, 
   ConversationActivityRecord, 
   WordEntry,
-  LearningStats
+  LearningStats // This already includes languagesCoveredCount from the updated activityStore.ts
 } from '@/lib/activityStore'; // Reuse types for consistency
 
 const USER_ACTIVITY_COLLECTION_PATH = (userId: string) => `users/${userId}/activity`;
@@ -91,8 +91,14 @@ export async function getActivitiesFromFirestore(userId: string, count?: number)
  * @returns Promise<LearningStats>
  */
 export async function getLearningStatsFromFirestore(userId: string): Promise<LearningStats> {
+  const defaultStats: LearningStats = { 
+    totalWordsLearned: 0, 
+    fieldsCoveredCount: 0, 
+    wordSetsGenerated: 0, 
+    languagesCoveredCount: 0 
+  };
   if (!userId) {
-    return { totalWordsLearned: 0, fieldsCoveredCount: 0, wordSetsGenerated: 0 };
+    return defaultStats;
   }
   try {
     const allActivities = await getActivitiesFromFirestore(userId); // Fetch all activities for stats
@@ -108,6 +114,9 @@ export async function getLearningStatsFromFirestore(userId: string): Promise<Lea
     const uniqueFields = new Set(
       wordSetActivities.map(item => `${item.language} - ${item.field}`)
     );
+    const uniqueLanguages = new Set(
+      wordSetActivities.map(item => item.language)
+    );
     
     // For now, conversation stats are not explicitly part of LearningStats,
     // but you could add them here if needed (e.g., totalConversationsGenerated).
@@ -116,9 +125,10 @@ export async function getLearningStatsFromFirestore(userId: string): Promise<Lea
       totalWordsLearned,
       fieldsCoveredCount: uniqueFields.size,
       wordSetsGenerated: wordSetActivities.length,
+      languagesCoveredCount: uniqueLanguages.size,
     };
   } catch (error) {
     console.error("Error calculating stats from Firestore:", error);
-    return { totalWordsLearned: 0, fieldsCoveredCount: 0, wordSetsGenerated: 0 };
+    return defaultStats;
   }
 }

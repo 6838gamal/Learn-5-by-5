@@ -44,6 +44,7 @@ export interface LearningStats {
   totalWordsLearned: number;
   fieldsCoveredCount: number;
   wordSetsGenerated: number;
+  languagesCoveredCount: number; // Added new field
 }
 
 const STORAGE_KEY = "linguaLeapActivity_local"; // Suffix to differentiate if old keys exist
@@ -158,7 +159,7 @@ export function getActivityData(): ActivityData {
  */
 export function getStats(): LearningStats {
   if (typeof window === "undefined") {
-    return { totalWordsLearned: 0, fieldsCoveredCount: 0, wordSetsGenerated: 0 };
+    return { totalWordsLearned: 0, fieldsCoveredCount: 0, wordSetsGenerated: 0, languagesCoveredCount: 0 };
   }
   const activityData = getActivityData();
   
@@ -173,9 +174,13 @@ export function getStats(): LearningStats {
   const uniqueFields = new Set(
     wordSetActivities.map(item => `${item.language} - ${item.field}`)
   );
+  const uniqueLanguages = new Set(
+    wordSetActivities.map(item => item.language)
+  );
   return {
     totalWordsLearned,
     fieldsCoveredCount: uniqueFields.size,
     wordSetsGenerated: wordSetActivities.length,
+    languagesCoveredCount: uniqueLanguages.size,
   };
 }
