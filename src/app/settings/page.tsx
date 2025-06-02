@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Wrench, TextQuote, Contrast, Unlock, ListPlus, LanguagesIcon } from "lucide-react";
+import { Wrench, TextQuote, Contrast, Unlock, ListPlus, LanguagesIcon, Save } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -24,31 +24,51 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
 
-  const [textSize, setTextSize] = useState("medium"); // Conceptual
-  const [colorContrast, setColorContrast] = useState("default"); // Conceptual
+  // State for current settings (loaded from store)
+  const [currentNumberOfWords, setCurrentNumberOfWords] = useState<NumberOfWordsSetting>(5);
+  const [currentAppLanguage, setCurrentAppLanguage] = useState<AppLanguageSetting>("en");
   
-  const [numberOfWords, setNumberOfWordsState] = useState<NumberOfWordsSetting>(5);
-  const [appLanguage, setAppLanguageState] = useState<AppLanguageSetting>("en");
+  // State for pending changes (updated by UI controls)
+  const [pendingNumberOfWords, setPendingNumberOfWords] = useState<NumberOfWordsSetting>(5);
+  const [pendingAppLanguage, setPendingAppLanguage] = useState<AppLanguageSetting>("en");
+  const [pendingTextSize, setPendingTextSize] = useState("medium"); // Conceptual
+  const [pendingColorContrast, setPendingColorContrast] = useState("default"); // Conceptual
 
   useEffect(() => {
     setIsClient(true);
-    setNumberOfWordsState(getNumberOfWordsSetting());
-    setAppLanguageState(getAppLanguageSetting());
+    const initialNumWords = getNumberOfWordsSetting();
+    const initialAppLang = getAppLanguageSetting();
+
+    setCurrentNumberOfWords(initialNumWords);
+    setPendingNumberOfWords(initialNumWords);
+
+    setCurrentAppLanguage(initialAppLang);
+    setPendingAppLanguage(initialAppLang);
+
+    // Initialize conceptual settings if they were ever stored or have defaults
+    // For now, they just reset to default on load as they are conceptual
+    setPendingTextSize("medium"); 
+    setPendingColorContrast("default");
+
   }, []);
 
-  const handleNumberOfWordsChange = (value: string) => {
-    const num = parseInt(value, 10) as NumberOfWordsSetting;
-    if (num === 3 || num === 5) {
-      setNumberOfWordsSetting(num);
-      setNumberOfWordsState(num);
-      toast({ title: "Setting Saved", description: `Number of words per generation set to ${num}.` });
-    }
-  };
+  const handleSaveSettings = () => {
+    if (!isClient) return;
 
-  const handleAppLanguageChange = (value: AppLanguageSetting) => {
-    setAppLanguageSetting(value);
-    setAppLanguageState(value);
-    toast({ title: "Setting Saved (Conceptual)", description: `App display language set to ${value}. This is a conceptual setting for now.` });
+    setNumberOfWordsSetting(pendingNumberOfWords);
+    setCurrentNumberOfWords(pendingNumberOfWords); // Update current display state
+
+    setAppLanguageSetting(pendingAppLanguage);
+    setCurrentAppLanguage(pendingAppLanguage); // Update current display state
+    
+    // For conceptual settings, we can just log or acknowledge them
+    console.log("Conceptual Text Size setting:", pendingTextSize);
+    console.log("Conceptual Color Contrast setting:", pendingColorContrast);
+
+    toast({ 
+      title: "Settings Saved", 
+      description: `Preferences have been updated. Number of words: ${pendingNumberOfWords}. App language: ${pendingAppLanguage} (conceptual).` 
+    });
   };
 
   const handleChangePassword = () => {
@@ -89,7 +109,7 @@ export default function SettingsPage() {
             Settings
           </CardTitle>
           <CardDescription className="text-lg mt-1">
-            Customize your LinguaLeap experience.
+            Customize your LinguaLeap experience. Click "Save Settings" to apply changes.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
@@ -102,8 +122,8 @@ export default function SettingsPage() {
             <Label htmlFor="num-words-group" className="text-base">Number of words per generation:</Label>
             <RadioGroup 
               id="num-words-group"
-              value={numberOfWords.toString()} 
-              onValueChange={handleNumberOfWordsChange} 
+              value={pendingNumberOfWords.toString()} 
+              onValueChange={(value) => setPendingNumberOfWords(parseInt(value) as NumberOfWordsSetting)} 
               className="space-y-2"
             >
               <div className="flex items-center space-x-2">
@@ -127,7 +147,10 @@ export default function SettingsPage() {
               <LanguagesIcon className="w-6 h-6 mr-2 text-accent" />
               App Display Language
             </h3>
-            <Select value={appLanguage} onValueChange={handleAppLanguageChange}>
+            <Select 
+              value={pendingAppLanguage} 
+              onValueChange={(value) => setPendingAppLanguage(value as AppLanguageSetting)}
+            >
               <SelectTrigger className="w-[280px]">
                 <SelectValue placeholder="Select app language" />
               </SelectTrigger>
@@ -165,7 +188,11 @@ export default function SettingsPage() {
               <TextQuote className="w-6 h-6 mr-2 text-accent" />
               Text Size (Conceptual)
             </h3>
-            <RadioGroup value={textSize} onValueChange={setTextSize} className="space-y-2">
+            <RadioGroup 
+              value={pendingTextSize} 
+              onValueChange={setPendingTextSize} 
+              className="space-y-2"
+            >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="small" id="ts-small" />
                 <Label htmlFor="ts-small" className="text-base">Small</Label>
@@ -191,7 +218,11 @@ export default function SettingsPage() {
               <Contrast className="w-6 h-6 mr-2 text-accent" />
               Color Contrast (Conceptual)
             </h3>
-            <RadioGroup value={colorContrast} onValueChange={setColorContrast} className="space-y-2">
+            <RadioGroup 
+              value={pendingColorContrast} 
+              onValueChange={setPendingColorContrast} 
+              className="space-y-2"
+            >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="default" id="cc-default" />
                 <Label htmlFor="cc-default" className="text-base">Default</Label>
@@ -212,8 +243,16 @@ export default function SettingsPage() {
           
           <Separator />
 
-          <div className="text-center mt-8">
-            <p className="text-muted-foreground mb-6">
+          <div className="flex flex-col items-center gap-6 mt-8 border-t pt-8">
+            <Button 
+              onClick={handleSaveSettings} 
+              size="lg"
+              className="w-full max-w-xs bg-accent hover:bg-accent/90 text-accent-foreground text-lg py-3"
+            >
+              <Save className="w-5 h-5 mr-2" />
+              Save Settings
+            </Button>
+            <p className="text-muted-foreground text-sm">
               More settings for exercise timers and notifications will be available here soon.
             </p>
             <Button asChild variant="outline">
@@ -225,3 +264,4 @@ export default function SettingsPage() {
     </div>
   );
 }
+
