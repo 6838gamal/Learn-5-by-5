@@ -1,6 +1,6 @@
 
 // src/lib/userSettingsService.ts
-"use server"; // Can be used by server actions
+// REMOVED 'use server'; directive from here
 
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase'; // Import Firestore instance
@@ -86,3 +86,4 @@ export async function updateUserSettings(userId: string, settings: Partial<UserS
     throw error; // Re-throw to be handled by the caller
   }
 }
+
