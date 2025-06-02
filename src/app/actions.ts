@@ -5,30 +5,39 @@
 import { generateWordSet, type GenerateWordSetInput, type GenerateWordSetOutput } from "@/ai/flows/generate-word-set";
 import { generateConversation, type GenerateConversationInput, type GenerateConversationOutput } from "@/ai/flows/generate-conversation-flow";
 import { z } from "zod";
-import type { WordEntry } from "@/lib/activityStore"; // Import WordEntry type
+import type { WordEntry } from "@/lib/activityStore"; 
 
 const WordSetActionInputSchema = z.object({
   language: z.string().min(1, "Language is required."),
   field: z.string().min(1, "Field is required."),
+  count: z.number().min(3).max(5).optional().default(5), // Added count
 });
 
 export interface GenerateWordSetActionResult {
   wordEntries?: WordEntry[];
   error?: string;
-  language?: string; // Pass back for client-side activity logging
-  field?: string;    // Pass back for client-side activity logging
+  language?: string; 
+  field?: string;    
+  count?: number; // Pass back count for client-side activity logging
 }
 
 export async function handleGenerateWordSet(
-  data: GenerateWordSetInput
+  data: GenerateWordSetInput // This already includes count
 ): Promise<GenerateWordSetActionResult> {
   try {
-    const validatedData = WordSetActionInputSchema.parse(data);
-    const result: GenerateWordSetOutput = await generateWordSet(validatedData);
+    // The input 'data' to this function now matches GenerateWordSetInput from the flow,
+    // which already includes an optional 'count' that defaults in the flow's schema if not provided.
+    // So, we parse against that directly or ensure the Zod schema used here is compatible.
+    const validatedData = WordSetActionInputSchema.parse(data); 
+    const result: GenerateWordSetOutput = await generateWordSet(validatedData); // Pass validatedData (which has count)
     
     if (result.wordEntries && result.wordEntries.length > 0) {
-      // Return language and field so client can log activity
-      return { wordEntries: result.wordEntries, language: validatedData.language, field: validatedData.field };
+      return { 
+        wordEntries: result.wordEntries, 
+        language: validatedData.language, 
+        field: validatedData.field,
+        count: validatedData.count // Return the count used
+      };
     }
     return { error: "No word entries were generated. Please try again." };
   } catch (e) {
@@ -44,7 +53,6 @@ export async function handleGenerateWordSet(
   }
 }
 
-// Zod schema for validating conversation input within the action
 const ConversationActionInputSchema = z.object({
   language: z.string().describe('The language for the conversation.'),
   selectedWords: z.array(z.string()).min(2, "Please select at least two words.").describe('A list of words to include in the conversation.'),
@@ -54,8 +62,8 @@ const ConversationActionInputSchema = z.object({
 export interface GenerateConversationActionResult {
   conversation?: string;
   error?: string;
-  language?: string; // Pass back for client-side activity logging
-  selectedWords?: string[]; // Pass back for client-side activity logging
+  language?: string; 
+  selectedWords?: string[]; 
 }
 
 export async function handleGenerateConversation(
@@ -65,8 +73,11 @@ export async function handleGenerateConversation(
     const validatedData = ConversationActionInputSchema.parse(data);
     const result: GenerateConversationOutput = await generateConversation(validatedData);
     if (result.conversation) {
-      // Return language and selectedWords so client can log activity
-      return { conversation: result.conversation, language: validatedData.language, selectedWords: validatedData.selectedWords };
+      return { 
+        conversation: result.conversation, 
+        language: validatedData.language, 
+        selectedWords: validatedData.selectedWords 
+      };
     }
     return { error: "No conversation was generated. Please try again." };
   } catch (e) {
@@ -81,4 +92,3 @@ export async function handleGenerateConversation(
     return { error: errorMessage };
   }
 }
-

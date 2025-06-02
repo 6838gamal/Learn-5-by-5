@@ -25,6 +25,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { LANGUAGES, FIELDS, type SelectionOption } from "@/constants/data";
 import { handleGenerateWordSet, type GenerateWordSetActionResult } from "@/app/actions";
 import { addWordSetActivity, type WordEntry } from "@/lib/activityStore";
+import { getNumberOfWordsSetting, type NumberOfWordsSetting } from '@/lib/settingsStore'; // Import settings
 import { useToast } from "@/hooks/use-toast";
 import { Wand2, AlertTriangle, Languages, Lightbulb, Volume2, FileText, SpellCheck, BookOpenText, Home } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -37,6 +38,7 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel";
 
+// Form schema does not need 'count' as it's read from settings before submitting
 const learnFormSchema = z.object({
   language: z.string().min(1, "Please select a language."),
   field: z.string().min(1, "Please select a field of knowledge."),
@@ -56,22 +58,33 @@ export default function LearnClientPage() {
   const [currentCarouselIndex, setCurrentCarouselIndex] = React.useState(0)
   const [selectedWordEntry, setSelectedWordEntry] = useState<WordEntry | null>(null);
   const [splitWordView, setSplitWordView] = useState<string[]>([]);
+  const [currentWordsToGenerate, setCurrentWordsToGenerate] = useState<NumberOfWordsSetting>(5);
 
 
   useEffect(() => {
     setIsClient(true);
+    setCurrentWordsToGenerate(getNumberOfWordsSetting()); // Load setting on mount
   }, []);
+
+  // Update currentWordsToGenerate if the setting changes elsewhere (e.g., in another tab)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setCurrentWordsToGenerate(getNumberOfWordsSetting());
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
 
   useEffect(() => {
     if (!carouselApi) {
       return
     }
-    setCurrentCarouselIndex(carouselApi.selectedScrollSnap()) // Initialize
+    setCurrentCarouselIndex(carouselApi.selectedScrollSnap()) 
     const onSelect = () => {
       setCurrentCarouselIndex(carouselApi.selectedScrollSnap())
     };
     carouselApi.on("select", onSelect);
-    // Clean up listener
     return () => {
       carouselApi.off("select", onSelect);
     };
@@ -110,22 +123,25 @@ export default function LearnClientPage() {
     setSplitWordView([]);
     setCurrentCarouselIndex(0);
     if (carouselApi) {
-        carouselApi.scrollTo(0, true); // Reset carousel to first slide instantly
+        carouselApi.scrollTo(0, true); 
     }
 
+    const countToGenerate = getNumberOfWordsSetting(); // Get current setting
 
-    const result: GenerateWordSetActionResult = await handleGenerateWordSet(data);
+    const result: GenerateWordSetActionResult = await handleGenerateWordSet({
+      ...data,
+      count: countToGenerate, // Add count to the action payload
+    });
 
     if (result.wordEntries && result.wordEntries.length > 0 && result.language && result.field) {
       setGeneratedWordEntries(result.wordEntries);
       if (result.wordEntries.length > 0) {
-        setSelectedWordEntry(result.wordEntries[0]); // Set first word as selected initially
+        setSelectedWordEntry(result.wordEntries[0]); 
       }
-      // Log activity on client-side after successful generation
       addWordSetActivity(result.language, result.field, result.wordEntries);
       toast({
         title: "Word Entries Generated!",
-        description: `A new set for ${data.field} in ${data.language} is ready.`,
+        description: `A new set of ${result.wordEntries.length} items for ${data.field} in ${data.language} is ready.`,
       });
     } else if (result.error) {
       setError(result.error);
@@ -180,7 +196,8 @@ export default function LearnClientPage() {
             </CardTitle>
           </div>
           <CardDescription className="text-center text-lg">
-            Select language and field to generate 5 words, each with an example sentence.
+            Select language and field to generate {currentWordsToGenerate} words, each with an example sentence.
+            (<Link href="/settings" className="underline text-primary hover:text-accent">Change count in settings</Link>)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -274,12 +291,12 @@ export default function LearnClientPage() {
             <div className="mt-8">
             {isLoading && (
               <div>
-                <Skeleton className="h-24 w-full mb-4" /> {/* Placeholder for carousel */}
-                <Skeleton className="h-12 w-1/2 mx-auto mb-2" /> {/* Placeholder for word title */}
-                <Skeleton className="h-8 w-3/4 mx-auto mb-4" /> {/* Placeholder for split word view */}
+                <Skeleton className="h-24 w-full mb-4" /> 
+                <Skeleton className="h-12 w-1/2 mx-auto mb-2" /> 
+                <Skeleton className="h-8 w-3/4 mx-auto mb-4" /> 
                 <div className="mt-6">
-                  <Skeleton className="h-8 w-1/3 mb-2" /> {/* Placeholder for sentence title */}
-                  <Skeleton className="h-10 w-full" /> {/* Placeholder for sentence content */}
+                  <Skeleton className="h-8 w-1/3 mb-2" /> 
+                  <Skeleton className="h-10 w-full" /> 
                 </div>
               </div>
             )}
@@ -287,7 +304,7 @@ export default function LearnClientPage() {
             {!isLoading && generatedWordEntries.length > 0 && (
               <>
                 <h3 className="text-2xl font-semibold mb-4 text-center text-primary flex items-center justify-center gap-2">
-                  <SpellCheck className="w-7 h-7 text-accent"/> Your Word Set:
+                  <SpellCheck className="w-7 h-7 text-accent"/> Your Word Set ({generatedWordEntries.length} items):
                 </h3>
                 <Carousel setApi={setCarouselApi} className="w-full max-w-xs sm:max-w-sm md:max-w-md mx-auto mb-6">
                   <CarouselContent>
