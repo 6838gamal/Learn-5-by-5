@@ -1,34 +1,39 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Mic, Volume2, Info, BookOpenText, FileText } from "lucide-react";
+import { Mic, Volume2, Info, BookOpenText, FileText, Languages, Loader2, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { getActivityData, type WordSetActivityRecord, type WordEntry } from "@/lib/activityStore";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { LANGUAGES, type SelectionOption } from "@/constants/data";
 
 interface DisplayableWordSoundEntry {
   word: string;
-  sentence: string | null; // Sentence can be null if not found or if a word existed without one
+  sentence: string | null;
 }
 
 export default function SoundsPage() {
   const [displayableEntries, setDisplayableEntries] = useState<DisplayableWordSoundEntry[]>([]);
   const [isClient, setIsClient] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState<string>("");
 
   useEffect(() => {
     setIsClient(true);
-    if (typeof window !== "undefined") {
+  }, []);
+
+  useEffect(() => {
+    if (isClient && selectedLanguage) {
       const activityData = getActivityData();
       const wordSentenceMap = new Map<string, { sentence: string | null, timestamp: number }>();
 
       activityData.learnedItems.forEach(record => {
-        if (record.type === 'wordSet' && record.wordEntries) {
+        if (record.type === 'wordSet' && record.language === selectedLanguage && record.wordEntries) {
           record.wordEntries.forEach((entry: WordEntry) => {
-            // If word is new or this record is newer, update/add its sentence
             if (!wordSentenceMap.has(entry.word) || record.timestamp > (wordSentenceMap.get(entry.word)?.timestamp || 0)) {
               wordSentenceMap.set(entry.word, { sentence: entry.sentence, timestamp: record.timestamp });
             }
@@ -39,11 +44,13 @@ export default function SoundsPage() {
       const processedEntries: DisplayableWordSoundEntry[] = Array.from(wordSentenceMap.entries()).map(([word, data]) => ({
         word,
         sentence: data.sentence,
-      })).sort((a, b) => a.word.localeCompare(b.word)); // Sort alphabetically by word
+      })).sort((a, b) => a.word.localeCompare(b.word));
 
       setDisplayableEntries(processedEntries);
+    } else if (isClient && !selectedLanguage) {
+        setDisplayableEntries([]); // Clear entries if no language is selected
     }
-  }, []);
+  }, [isClient, selectedLanguage]);
 
   const handlePlayWordAudio = (word: string) => {
     console.log(`Playing audio for word: ${word}`);
@@ -55,6 +62,20 @@ export default function SoundsPage() {
     console.log(`Playing audio for sentence: ${sentence}`);
     alert(`Audio playback for the sentence "${sentence}" is not yet implemented. This feature will use Text-to-Speech in the future.`);
   };
+  
+  const languageDisplayNode = useMemo(() => {
+    if (isClient && selectedLanguage) {
+      const lang = LANGUAGES.find(l => l.value === selectedLanguage);
+      return lang ? (
+        <div className="flex items-center gap-2">
+          {lang.emoji && <span className="text-lg">{lang.emoji}</span>}
+          {lang.label}
+        </div>
+      ) : <SelectValue placeholder="Choose a language..." />;
+    }
+    return <SelectValue placeholder="Choose a language..." />;
+  }, [isClient, selectedLanguage]);
+
 
   if (!isClient) {
     return (
@@ -66,15 +87,11 @@ export default function SoundsPage() {
               Sounds Practice
             </CardTitle>
             <CardDescription className="text-center text-lg mt-2">
-              Loading your learned words and sentences...
+              Loading interface...
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
-            <div className="animate-pulse space-y-3">
-              <div className="h-8 bg-muted rounded w-3/4 mx-auto"></div>
-              <div className="h-8 bg-muted rounded w-1/2 mx-auto"></div>
-              <div className="h-8 bg-muted rounded w-2/3 mx-auto"></div>
-            </div>
+            <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
           </CardContent>
         </Card>
       </div>
@@ -87,14 +104,54 @@ export default function SoundsPage() {
         <CardHeader className="items-center text-center">
           <Mic className="w-16 h-16 text-primary mb-4" />
           <CardTitle className="text-3xl font-bold text-primary">
-            Your Learned Words & Sentences
+            {selectedLanguage 
+              ? `Sounds in ${LANGUAGES.find(l => l.value === selectedLanguage)?.label || selectedLanguage}` 
+              : "Sounds Practice"}
           </CardTitle>
           <CardDescription className="text-lg mt-2">
-            Practice listening to words and their example sentences. Click the speaker icon to hear them (feature coming soon).
+            {selectedLanguage 
+              ? `Practice listening to words and sentences you've learned in ${LANGUAGES.find(l => l.value === selectedLanguage)?.label || selectedLanguage}.`
+              : "Select a language to see your learned words and sentences. Click the speaker icon to hear them (feature coming soon)."}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {displayableEntries.length > 0 ? (
+          <div className="mb-6">
+            <Label htmlFor="language-select-sounds" className="text-base flex items-center gap-2 mb-2">
+              <Languages className="w-5 h-5 text-primary" /> Select Language:
+            </Label>
+            <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+              <SelectTrigger id="language-select-sounds">
+                {languageDisplayNode}
+              </SelectTrigger>
+              <SelectContent>
+                {LANGUAGES.map(lang => (
+                  <SelectItem key={lang.value} value={lang.value}>
+                    <div className="flex items-center gap-3 py-1">
+                      <span className="text-xl">{lang.emoji}</span>
+                      <div>
+                        <span className="font-medium">{lang.label}</span>
+                        {lang.description && (
+                           <p className="text-xs text-muted-foreground">{lang.description}</p>
+                        )}
+                      </div>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {!selectedLanguage && (
+            <Alert variant="default" className="bg-secondary/30">
+                <Info className="h-5 w-5 text-primary" />
+                <AlertTitle>Select a Language</AlertTitle>
+                <AlertDescription>
+                    Please choose a language from the dropdown above to view your learned words and sentences.
+                </AlertDescription>
+            </Alert>
+          )}
+
+          {selectedLanguage && displayableEntries.length > 0 && (
             <>
               <Alert className="mb-6 bg-secondary/30">
                 <Info className="h-5 w-5 text-primary" />
@@ -147,19 +204,20 @@ export default function SoundsPage() {
                 </ul>
               </ScrollArea>
             </>
-          ) : (
-            <div className="text-center py-10">
-              <BookOpenText className="w-20 h-20 text-muted-foreground mx-auto mb-4" />
-              <p className="text-xl text-muted-foreground mb-4">No words learned yet.</p>
-              <p className="text-md text-muted-foreground mb-6">
-                Go to the &quot;Words&quot; section to generate some vocabulary and start your learning journey!
-              </p>
-              <Button asChild>
-                <Link href="/words">Generate Words</Link>
-              </Button>
-            </div>
           )}
-          <div className="mt-8 text-center">
+          
+          {selectedLanguage && displayableEntries.length === 0 && (
+             <Alert variant="default" className="bg-secondary/30">
+                <AlertTriangle className="h-4 w-4 text-primary" />
+                <AlertTitle>No Words Yet for {LANGUAGES.find(l => l.value === selectedLanguage)?.label || selectedLanguage}</AlertTitle>
+                <AlertDescription>
+                You haven't generated any words in {LANGUAGES.find(l=>l.value === selectedLanguage)?.label || selectedLanguage} yet. 
+                Go to the <Link href="/words" className="underline hover:text-primary font-medium">Words section</Link> to add some!
+                </AlertDescription>
+            </Alert>
+          )}
+
+          <div className="mt-8 text-center border-t pt-6">
             <Button asChild variant="outline">
               <Link href="/">Return to Home</Link>
             </Button>
@@ -169,3 +227,4 @@ export default function SoundsPage() {
     </div>
   );
 }
+
