@@ -1,9 +1,9 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Wrench, TextQuote, Contrast, Unlock, ListPlus, LanguagesIcon, Save } from "lucide-react";
+import { Wrench, TextQuote, Contrast, Unlock, ListPlus, LanguagesIcon, Save, Loader2, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -12,63 +12,92 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { 
-  getNumberOfWordsSetting, 
-  setNumberOfWordsSetting,
-  getAppLanguageSetting,
-  setAppLanguageSetting,
-  type NumberOfWordsSetting,
-  type AppLanguageSetting
-} from '@/lib/settingsStore';
+  fetchUserSettingsAction, 
+  saveUserSettingsAction,
+  type FetchSettingsActionResult,
+  type SaveSettingsActionResult
+} from '@/app/settingsActions'; // Updated import
+import type { NumberOfWordsSetting, AppLanguageSetting, UserSettings } from '@/lib/userSettingsService'; // Import types
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged, type User } from 'firebase/auth';
 
 export default function SettingsPage() {
   const { toast } = useToast();
-  const [isClient, setIsClient] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true); // For initial load
+  const [isSaving, setIsSaving] = useState(false); // For save operation
+  const [error, setError] = useState<string | null>(null);
 
-  // State for current settings (loaded from store)
-  const [currentNumberOfWords, setCurrentNumberOfWords] = useState<NumberOfWordsSetting>(5);
-  const [currentAppLanguage, setCurrentAppLanguage] = useState<AppLanguageSetting>("en");
-  
   // State for pending changes (updated by UI controls)
   const [pendingNumberOfWords, setPendingNumberOfWords] = useState<NumberOfWordsSetting>(5);
   const [pendingAppLanguage, setPendingAppLanguage] = useState<AppLanguageSetting>("en");
   const [pendingTextSize, setPendingTextSize] = useState("medium"); // Conceptual
   const [pendingColorContrast, setPendingColorContrast] = useState("default"); // Conceptual
 
+  // Fetch settings when user is available or changes
+  const loadUserSettings = useCallback(async (user: User) => {
+    setIsLoading(true);
+    setError(null);
+    const result: FetchSettingsActionResult = await fetchUserSettingsAction({ userId: user.uid });
+    if (result.settings) {
+      setPendingNumberOfWords(result.settings.numberOfWords);
+      setPendingAppLanguage(result.settings.appLanguage);
+      // Initialize conceptual settings if they were ever stored or have defaults
+      // setPendingTextSize(result.settings.textSize || "medium");
+      // setPendingColorContrast(result.settings.colorContrast || "default");
+    } else if (result.error) {
+      setError(result.error);
+      toast({ variant: "destructive", title: "Error Loading Settings", description: result.error });
+      // Fallback to defaults on error
+      setPendingNumberOfWords(5);
+      setPendingAppLanguage("en");
+    }
+    setIsLoading(false);
+  }, [toast]);
+
   useEffect(() => {
-    setIsClient(true);
-    const initialNumWords = getNumberOfWordsSetting();
-    const initialAppLang = getAppLanguageSetting();
-
-    setCurrentNumberOfWords(initialNumWords);
-    setPendingNumberOfWords(initialNumWords);
-
-    setCurrentAppLanguage(initialAppLang);
-    setPendingAppLanguage(initialAppLang);
-
-    // Initialize conceptual settings if they were ever stored or have defaults
-    // For now, they just reset to default on load as they are conceptual
-    setPendingTextSize("medium"); 
-    setPendingColorContrast("default");
-
-  }, []);
-
-  const handleSaveSettings = () => {
-    if (!isClient) return;
-
-    setNumberOfWordsSetting(pendingNumberOfWords);
-    setCurrentNumberOfWords(pendingNumberOfWords); // Update current display state
-
-    setAppLanguageSetting(pendingAppLanguage);
-    setCurrentAppLanguage(pendingAppLanguage); // Update current display state
-    
-    // For conceptual settings, we can just log or acknowledge them
-    console.log("Conceptual Text Size setting:", pendingTextSize);
-    console.log("Conceptual Color Contrast setting:", pendingColorContrast);
-
-    toast({ 
-      title: "Settings Saved", 
-      description: `Preferences have been updated. Number of words: ${pendingNumberOfWords}. App language: ${pendingAppLanguage} (conceptual).` 
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      if (user) {
+        loadUserSettings(user);
+      } else {
+        setIsLoading(false); // Not logged in, no settings to load
+        // Optionally redirect or show login message
+        setError("You need to be logged in to manage settings.");
+      }
     });
+    return () => unsubscribe();
+  }, [loadUserSettings]);
+
+
+  const handleSaveSettings = async () => {
+    if (!currentUser) {
+      toast({ variant: "destructive", title: "Not Authenticated", description: "You must be logged in to save settings." });
+      return;
+    }
+    setIsSaving(true);
+    setError(null);
+
+    const settingsToSave: Partial<Pick<UserSettings, 'numberOfWords' | 'appLanguage'>> = {
+      numberOfWords: pendingNumberOfWords,
+      appLanguage: pendingAppLanguage,
+      // conceptual settings if they were to be saved:
+      // textSize: pendingTextSize as any, 
+      // colorContrast: pendingColorContrast as any,
+    };
+
+    const result: SaveSettingsActionResult = await saveUserSettingsAction({ userId: currentUser.uid, settings: settingsToSave });
+
+    if (result.success) {
+      toast({ 
+        title: "Settings Saved", 
+        description: `Preferences have been updated in Firestore. Number of words: ${pendingNumberOfWords}. App language: ${pendingAppLanguage} (conceptual).` 
+      });
+    } else if (result.error) {
+      setError(result.error);
+      toast({ variant: "destructive", title: "Error Saving Settings", description: result.error });
+    }
+    setIsSaving(false);
   };
 
   const handleChangePassword = () => {
@@ -79,7 +108,7 @@ export default function SettingsPage() {
     });
   };
 
-  if (!isClient) {
+  if (isLoading) {
     return (
       <div className="container mx-auto py-8 px-4">
         <Card className="w-full max-w-2xl mx-auto shadow-xl">
@@ -87,19 +116,34 @@ export default function SettingsPage() {
             <Wrench className="w-12 h-12 text-primary mb-3" />
             <CardTitle className="text-3xl font-bold text-primary">Settings</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="animate-pulse space-y-6">
-              <div className="h-8 bg-muted rounded w-1/3"></div>
-              <div className="h-10 bg-muted rounded w-full"></div>
-              <div className="h-8 bg-muted rounded w-1/3 mt-4"></div>
-              <div className="h-10 bg-muted rounded w-full"></div>
-            </div>
+          <CardContent className="text-center">
+            <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+            <p className="mt-4 text-muted-foreground">Loading your settings...</p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
+  if (!currentUser && !isLoading) {
+     return (
+      <div className="container mx-auto py-8 px-4">
+        <Card className="w-full max-w-md mx-auto shadow-xl">
+          <CardHeader className="items-center text-center">
+            <Unlock className="w-12 h-12 text-primary mb-3" />
+            <CardTitle className="text-2xl font-bold text-primary">Access Denied</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <p className="text-muted-foreground">Please log in to view and manage your settings.</p>
+            <Button asChild>
+              <Link href="/auth/login">Go to Login</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
   return (
     <div className="container mx-auto py-8 px-4">
       <Card className="w-full max-w-2xl mx-auto shadow-xl">
@@ -113,6 +157,12 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
+          {error && (
+             <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5" />
+                <p>{error}</p>
+            </div>
+          )}
           
           <div className="space-y-4">
             <h3 className="text-xl font-semibold text-foreground flex items-center">
@@ -125,6 +175,7 @@ export default function SettingsPage() {
               value={pendingNumberOfWords.toString()} 
               onValueChange={(value) => setPendingNumberOfWords(parseInt(value) as NumberOfWordsSetting)} 
               className="space-y-2"
+              disabled={isSaving}
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="3" id="nw-3" />
@@ -150,6 +201,7 @@ export default function SettingsPage() {
             <Select 
               value={pendingAppLanguage} 
               onValueChange={(value) => setPendingAppLanguage(value as AppLanguageSetting)}
+              disabled={isSaving}
             >
               <SelectTrigger className="w-[280px]">
                 <SelectValue placeholder="Select app language" />
@@ -162,7 +214,7 @@ export default function SettingsPage() {
               </SelectContent>
             </Select>
             <p className="text-sm text-muted-foreground">
-              Change the display language of the LinguaLeap interface. (This is a conceptual control for now and does not change the UI language yet.)
+              Change the display language of the LinguaLeap interface. (This is a conceptual control.)
             </p>
           </div>
           
@@ -173,7 +225,7 @@ export default function SettingsPage() {
               <Unlock className="w-6 h-6 mr-2 text-accent" />
               Account Security
             </h3>
-            <Button onClick={handleChangePassword} variant="outline">
+            <Button onClick={handleChangePassword} variant="outline" disabled={isSaving}>
               Change Password
             </Button>
             <p className="text-sm text-muted-foreground">
@@ -192,6 +244,7 @@ export default function SettingsPage() {
               value={pendingTextSize} 
               onValueChange={setPendingTextSize} 
               className="space-y-2"
+              disabled={isSaving}
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="small" id="ts-small" />
@@ -222,6 +275,7 @@ export default function SettingsPage() {
               value={pendingColorContrast} 
               onValueChange={setPendingColorContrast} 
               className="space-y-2"
+              disabled={isSaving}
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="default" id="cc-default" />
@@ -248,14 +302,22 @@ export default function SettingsPage() {
               onClick={handleSaveSettings} 
               size="lg"
               className="w-full max-w-xs bg-accent hover:bg-accent/90 text-accent-foreground text-lg py-3"
+              disabled={isSaving || isLoading}
             >
-              <Save className="w-5 h-5 mr-2" />
-              Save Settings
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-5 h-5 mr-2" /> Save Settings
+                </>
+              )}
             </Button>
             <p className="text-muted-foreground text-sm">
               More settings for exercise timers and notifications will be available here soon.
             </p>
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" disabled={isSaving}>
               <Link href="/">Return to Home</Link>
             </Button>
           </div>
@@ -264,4 +326,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-

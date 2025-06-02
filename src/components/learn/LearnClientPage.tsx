@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -24,11 +24,13 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import { LANGUAGES, FIELDS, type SelectionOption } from "@/constants/data";
 import { handleGenerateWordSet, type GenerateWordSetActionResult } from "@/app/actions";
-import { addWordSetActivity, type WordEntry } from "@/lib/activityStore";
-import { getNumberOfWordsSetting, type NumberOfWordsSetting } from '@/lib/settingsStore'; // Import settings
+import { addWordSetActivity, type WordEntry } from "@/lib/activityStore"; // Still used for client-side logging if needed, or will be replaced
+import { getNumberOfWordsSettingAction } from '@/app/settingsActions'; // Import Firestore-backed setting getter
+import type { NumberOfWordsSetting } from '@/lib/userSettingsService'; // Import type
 import { useToast } from "@/hooks/use-toast";
-import { Wand2, AlertTriangle, Languages, Lightbulb, Volume2, FileText, SpellCheck, BookOpenText, Home } from "lucide-react";
+import { Wand2, AlertTriangle, Languages, Lightbulb, Volume2, FileText, SpellCheck, BookOpenText, Home, Loader2, Unlock } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Carousel,
   CarouselContent,
@@ -37,8 +39,9 @@ import {
   CarouselPrevious,
   type CarouselApi,
 } from "@/components/ui/carousel";
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged, type User } from 'firebase/auth';
 
-// Form schema does not need 'count' as it's read from settings before submitting
 const learnFormSchema = z.object({
   language: z.string().min(1, "Please select a language."),
   field: z.string().min(1, "Please select a field of knowledge."),
@@ -48,33 +51,43 @@ type LearnFormValues = z.infer<typeof learnFormSchema>;
 
 export default function LearnClientPage() {
   const [generatedWordEntries, setGeneratedWordEntries] = useState<WordEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // For AI generation
+  const [isSettingsLoading, setIsSettingsLoading] = useState(true); // For loading settings
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const router = useRouter();
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  const [isClient, setIsClient] = useState(false);
   const [carouselApi, setCarouselApi] = React.useState<CarouselApi>()
   const [currentCarouselIndex, setCurrentCarouselIndex] = React.useState(0)
   const [selectedWordEntry, setSelectedWordEntry] = useState<WordEntry | null>(null);
   const [splitWordView, setSplitWordView] = useState<string[]>([]);
   const [currentWordsToGenerate, setCurrentWordsToGenerate] = useState<NumberOfWordsSetting>(5);
 
-
   useEffect(() => {
-    setIsClient(true);
-    setCurrentWordsToGenerate(getNumberOfWordsSetting()); // Load setting on mount
-  }, []);
-
-  // Update currentWordsToGenerate if the setting changes elsewhere (e.g., in another tab)
-  useEffect(() => {
-    const handleStorageChange = () => {
-      setCurrentWordsToGenerate(getNumberOfWordsSetting());
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setCurrentUser(user);
+      if (user) {
+        setIsSettingsLoading(true);
+        try {
+          const numWords = await getNumberOfWordsSettingAction(user.uid);
+          setCurrentWordsToGenerate(numWords);
+        } catch (e) {
+          console.error("Failed to load number of words setting:", e);
+          toast({ variant: "destructive", title: "Could not load settings", description: "Using default word count." });
+          // Fallback to default if Firestore fetch fails
+          setCurrentWordsToGenerate(5);
+        } finally {
+          setIsSettingsLoading(false);
+        }
+      } else {
+        // Not logged in, use default or show message
+        setCurrentWordsToGenerate(5); // Default for non-logged-in users
+        setIsSettingsLoading(false);
+      }
+    });
+    return () => unsubscribe();
+  }, [toast]);
 
   useEffect(() => {
     if (!carouselApi) {
@@ -116,6 +129,12 @@ export default function LearnClientPage() {
   });
 
   async function onSubmit(data: LearnFormValues) {
+    if (!currentUser && auth.app.options.apiKey !== "YOUR_API_KEY_HERE") { // Check if not in test mode without Firebase
+       toast({ variant: "destructive", title: "Login Required", description: "Please log in to generate and save words." });
+       // Potentially disable form or redirect
+       return;
+    }
+
     setIsLoading(true);
     setError(null);
     setGeneratedWordEntries([]);
@@ -126,11 +145,19 @@ export default function LearnClientPage() {
         carouselApi.scrollTo(0, true); 
     }
 
-    const countToGenerate = getNumberOfWordsSetting(); // Get current setting
-
+    // Fetch current count setting for the logged-in user, or use default
+    let countToGenerate = currentWordsToGenerate; // Use state which is updated on auth change
+    if (currentUser) {
+      try {
+        countToGenerate = await getNumberOfWordsSettingAction(currentUser.uid);
+      } catch (e) {
+        console.error("Failed to fetch count setting during submit, using current state's value:", e);
+      }
+    }
+    
     const result: GenerateWordSetActionResult = await handleGenerateWordSet({
       ...data,
-      count: countToGenerate, // Add count to the action payload
+      count: countToGenerate,
     });
 
     if (result.wordEntries && result.wordEntries.length > 0 && result.language && result.field) {
@@ -138,7 +165,18 @@ export default function LearnClientPage() {
       if (result.wordEntries.length > 0) {
         setSelectedWordEntry(result.wordEntries[0]); 
       }
-      addWordSetActivity(result.language, result.field, result.wordEntries);
+      // TODO: Migrate addWordSetActivity to Firestore if user is logged in.
+      // For now, it still uses localStorage.
+      if (currentUser) {
+        // If you have a Firestore-based activity logger:
+        // await logWordSetActivityToFirestore(currentUser.uid, result.language, result.field, result.wordEntries);
+        console.log("User is logged in. TODO: Log activity to Firestore.");
+         addWordSetActivity(result.language, result.field, result.wordEntries); // Keep local for now or replace
+      } else {
+        // For non-logged-in users or if Firestore logging isn't ready, use localStorage
+        addWordSetActivity(result.language, result.field, result.wordEntries);
+      }
+      
       toast({
         title: "Word Entries Generated!",
         description: `A new set of ${result.wordEntries.length} items for ${data.field} in ${data.language} is ready.`,
@@ -172,16 +210,53 @@ export default function LearnClientPage() {
 
   let languageDisplayNode: React.ReactNode;
   const selectedLanguageValue = form.watch("language");
-  if (isClient && selectedLanguageValue) {
-    const selectedLanguage = LANGUAGES.find((lang: SelectionOption) => lang.value === selectedLanguageValue);
+  if (selectedLanguageValue) {
+    const selectedLanguageOption = LANGUAGES.find((lang: SelectionOption) => lang.value === selectedLanguageValue);
     languageDisplayNode = (
       <div className="flex items-center gap-2">
-        {selectedLanguage?.emoji && <span className="text-xl">{selectedLanguage.emoji}</span>}
-        <span>{selectedLanguage ? selectedLanguage.label : "Choose a language..."}</span>
+        {selectedLanguageOption?.emoji && <span className="text-xl">{selectedLanguageOption.emoji}</span>}
+        <span>{selectedLanguageOption ? selectedLanguageOption.label : "Choose a language..."}</span>
       </div>
     );
   } else {
     languageDisplayNode = <SelectValue placeholder="Choose a language..." />;
+  }
+  
+  if (isSettingsLoading) {
+     return (
+      <div className="container mx-auto py-8 px-4">
+        <Card className="w-full max-w-2xl mx-auto shadow-xl">
+          <CardHeader className="items-center text-center">
+            <BookOpenText className="w-10 h-10 text-primary mb-3" />
+            <CardTitle className="text-3xl font-bold text-primary">Generate Word Sets</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center">
+            <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+            <p className="mt-4 text-muted-foreground">Loading settings...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
+  // If not logged in and Firebase is configured (not in test placeholder mode)
+  if (!currentUser && auth.app.options.apiKey !== "YOUR_API_KEY_HERE" && !isSettingsLoading) {
+     return (
+      <div className="container mx-auto py-8 px-4">
+        <Card className="w-full max-w-md mx-auto shadow-xl">
+          <CardHeader className="items-center text-center">
+            <Unlock className="w-12 h-12 text-primary mb-3" />
+            <CardTitle className="text-2xl font-bold text-primary">Login Required</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <p className="text-muted-foreground">Please log in to generate words and save your progress.</p>
+            <Button asChild>
+              <Link href="/auth/login">Go to Login</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
 
@@ -197,7 +272,9 @@ export default function LearnClientPage() {
           </div>
           <CardDescription className="text-center text-lg">
             Select language and field to generate {currentWordsToGenerate} words, each with an example sentence.
-            (<Link href="/settings" className="underline text-primary hover:text-accent">Change count in settings</Link>)
+            {currentUser && ( // Only show link if user is logged in to access settings
+                <> (<Link href="/settings" className="underline text-primary hover:text-accent">Change count in settings</Link>)</>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -209,7 +286,7 @@ export default function LearnClientPage() {
                 render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-base flex items-center gap-2"><Languages className="w-5 h-5 text-primary" /> Language</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || ""} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value || ""} defaultValue={field.value} disabled={isLoading}>
                         <FormControl>
                           <SelectTrigger>
                             {languageDisplayNode}
@@ -242,7 +319,7 @@ export default function LearnClientPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-base flex items-center gap-2"><Lightbulb className="w-5 h-5 text-primary"/> Field of Knowledge</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Choose a field..." />
@@ -263,12 +340,12 @@ export default function LearnClientPage() {
 
               <Button 
                 type="submit" 
-                disabled={isLoading} 
+                disabled={isLoading || isSettingsLoading} 
                 className="w-full bg-accent hover:bg-accent/90 text-accent-foreground text-lg py-6 rounded-lg shadow-md transition-transform hover:scale-105"
               >
                 {isLoading ? (
                   <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-accent-foreground mr-2"></div>
+                    <Loader2 className="animate-spin h-5 w-5 mr-2"></Loader2>
                     Generating...
                   </div>
                 ) : (
@@ -287,9 +364,8 @@ export default function LearnClientPage() {
             </div>
           )}
           
-          {isClient && (
-            <div className="mt-8">
-            {isLoading && (
+          <div className="mt-8">
+            {isLoading && ( // This is for AI generation loading
               <div>
                 <Skeleton className="h-24 w-full mb-4" /> 
                 <Skeleton className="h-12 w-1/2 mx-auto mb-2" /> 
@@ -398,7 +474,6 @@ export default function LearnClientPage() {
                  </div>
             )}
             </div>
-          )}
         </CardContent>
       </Card>
     </div>

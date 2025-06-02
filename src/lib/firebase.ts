@@ -2,6 +2,7 @@
 // src/lib/firebase.ts
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
+import { getFirestore, type Firestore } from 'firebase/firestore'; // Added Firestore
 
 // IMPORTANT:
 // Replace the placeholder values below with your actual Firebase project configuration.
@@ -25,5 +26,6 @@ if (!getApps().length) {
 }
 
 const auth: Auth = getAuth(app);
+const db: Firestore = getFirestore(app); // Initialized Firestore
 
-export { app, auth };
+export { app, auth, db }; // Export db
