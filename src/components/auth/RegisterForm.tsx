@@ -56,12 +56,12 @@ export default function RegisterForm() {
     setIsLoading(true);
     setError(null);
 
-    if (auth.app.options.apiKey === "YOUR_API_KEY_HERE") {
-        setError("Firebase is not configured. Please update src/lib/firebase.ts with your project credentials.");
+    if (auth.app.options.apiKey === "YOUR_API_KEY_HERE" || (auth.app.options.appId === "YOUR_APP_ID_HERE" && auth.app.options.apiKey !== "AIzaSyDeN1mxcNwQqOyBtLE2AgZoBzf5exPYBoc" /* Check if it's still the very initial placeholder vs the user provided one */)) {
+        setError("Firebase is not configured correctly. Please update src/lib/firebase.ts with your project credentials, including the App ID.");
         toast({
             variant: "destructive",
             title: "Configuration Error",
-            description: "Firebase credentials are missing. Email/Password registration cannot proceed.",
+            description: "Firebase credentials are missing or incomplete. Email/Password registration cannot proceed.",
         });
         setIsLoading(false);
         return;
@@ -70,15 +70,18 @@ export default function RegisterForm() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       await updateProfile(userCredential.user, { displayName: data.name });
-      toast({ title: "Registration Successful", description: "Welcome! Your account has been created." });
-      router.push('/words'); // Redirect to words page
+      toast({ title: "Registration Successful", description: "Welcome! Your account has been created. Please log in." });
+      router.push('/auth/login'); // Redirect to login page
     } catch (e: any) {
       let errorMessage = "Failed to register. Please try again.";
       if (e.code === 'auth/email-already-in-use') {
         errorMessage = "This email address is already in use. Try logging in or using a different email.";
       } else if (e.code === 'auth/weak-password') {
         errorMessage = "The password is too weak. Please choose a stronger password.";
-      } else if (e.message) {
+      } else if (e.code === 'auth/network-request-failed') {
+        errorMessage = "Network error. Please check your internet connection and Firebase configuration (including App ID in src/lib/firebase.ts).";
+      }
+      else if (e.message) {
         errorMessage = e.message;
       }
       setError(errorMessage);
@@ -92,12 +95,12 @@ export default function RegisterForm() {
     setError(null);
     const provider = providerName === 'Google' ? new GoogleAuthProvider() : new FacebookAuthProvider();
 
-    if (auth.app.options.apiKey === "YOUR_API_KEY_HERE") {
-        setError("Firebase is not configured. Please update src/lib/firebase.ts with your project credentials.");
+    if (auth.app.options.apiKey === "YOUR_API_KEY_HERE" || (auth.app.options.appId === "YOUR_APP_ID_HERE" && auth.app.options.apiKey !== "AIzaSyDeN1mxcNwQqOyBtLE2AgZoBzf5exPYBoc")) {
+        setError("Firebase is not configured correctly. Please update src/lib/firebase.ts with your project credentials, including the App ID.");
         toast({
             variant: "destructive",
             title: "Configuration Error",
-            description: "Firebase credentials are missing. Social signup cannot proceed.",
+            description: "Firebase credentials are missing or incomplete. Social signup cannot proceed.",
         });
         setIsLoading(false);
         return;
@@ -109,9 +112,9 @@ export default function RegisterForm() {
       console.log(`${providerName} signup successful:`, user);
       toast({
         title: "Sign Up Successful",
-        description: `Welcome, ${user.displayName || user.email}! Your account is ready.`,
+        description: `Welcome, ${user.displayName || user.email}! Your account is ready. Redirecting to home...`,
       });
-      router.push('/words'); // Redirect to words page
+      router.push('/'); // Redirect to home page after social signup
     } catch (e: any) {
       console.error(`${providerName} signup error:`, e);
       let errorMessage = "An unexpected error occurred during social signup.";
@@ -121,6 +124,8 @@ export default function RegisterForm() {
         errorMessage = "Signup cancelled. The sign-in popup was closed.";
       } else if (e.code === 'auth/cancelled-popup-request') {
         errorMessage = "Signup cancelled. Multiple popup requests were made.";
+      } else if (e.code === 'auth/network-request-failed') {
+        errorMessage = "Network error. Please check your internet connection and Firebase configuration (including App ID in src/lib/firebase.ts).";
       } else if (e.code) {
         errorMessage = e.message;
       }

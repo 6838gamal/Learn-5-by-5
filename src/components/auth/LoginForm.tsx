@@ -51,30 +51,29 @@ export default function LoginForm() {
     // --------------- TEST MODE FLAG ---------------
     // Set to true to bypass Firebase email/password login and simulate success.
     // Set to false for normal Firebase email/password login.
-    const IS_TEST_MODE = true; 
+    const IS_TEST_MODE = false; // Set to false for actual Firebase login
     // --------------------------------------------
 
-    if (IS_TEST_MODE) {
+    if (IS_TEST_MODE && data.email === "admin@gmail.com" && data.password === "admingamal") {
       console.log("TEST MODE ACTIVE: Simulating login for admin@gmail.com");
-      // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 500)); 
       
       toast({ 
         title: "Login Successful (Test Mode)", 
         description: `Welcome back, admin@gmail.com! You are logged in for testing.` 
       });
-      router.push('/words'); // Redirect to words page
+      router.push('/'); // Redirect to home page
       setIsLoading(false);
-      return; // Skip Firebase logic
+      return; 
     }
 
     // Regular Firebase Email/Password Login Logic
-    if (auth.app.options.apiKey === "YOUR_API_KEY_HERE") {
-        setError("Firebase is not configured. Please update src/lib/firebase.ts with your project credentials.");
+    if (auth.app.options.apiKey === "YOUR_API_KEY_HERE" || (auth.app.options.appId === "YOUR_APP_ID_HERE" && auth.app.options.apiKey !== "AIzaSyDeN1mxcNwQqOyBtLE2AgZoBzf5exPYBoc")) {
+        setError("Firebase is not configured correctly. Please update src/lib/firebase.ts with your project credentials, including the App ID.");
         toast({
             variant: "destructive",
             title: "Configuration Error",
-            description: "Firebase credentials are missing. Email/Password login cannot proceed.",
+            description: "Firebase credentials are missing or incomplete. Email/Password login cannot proceed.",
         });
         setIsLoading(false);
         return;
@@ -83,12 +82,15 @@ export default function LoginForm() {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       toast({ title: "Login Successful", description: `Welcome back, ${userCredential.user.email}!` });
-      router.push('/words'); // Redirect to words page
+      router.push('/'); // Redirect to home page
     } catch (e: any) {
       let errorMessage = "Failed to log in. Please check your email and password.";
       if (e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
         errorMessage = "Invalid email or password. Please try again.";
-      } else if (e.message) {
+      } else if (e.code === 'auth/network-request-failed') {
+        errorMessage = "Network error. Please check your internet connection and Firebase configuration (including App ID in src/lib/firebase.ts).";
+      }
+      else if (e.message) {
         errorMessage = e.message;
       }
       setError(errorMessage);
@@ -102,12 +104,12 @@ export default function LoginForm() {
     setError(null);
     const provider = providerName === 'Google' ? new GoogleAuthProvider() : new FacebookAuthProvider();
 
-    if (auth.app.options.apiKey === "YOUR_API_KEY_HERE") {
-        setError("Firebase is not configured. Please update src/lib/firebase.ts with your project credentials.");
+    if (auth.app.options.apiKey === "YOUR_API_KEY_HERE" || (auth.app.options.appId === "YOUR_APP_ID_HERE" && auth.app.options.apiKey !== "AIzaSyDeN1mxcNwQqOyBtLE2AgZoBzf5exPYBoc")) {
+        setError("Firebase is not configured correctly. Please update src/lib/firebase.ts with your project credentials, including the App ID.");
         toast({
             variant: "destructive",
             title: "Configuration Error",
-            description: "Firebase credentials are missing. Social login cannot proceed.",
+            description: "Firebase credentials are missing or incomplete. Social login cannot proceed.",
         });
         setIsLoading(false);
         return;
@@ -121,7 +123,7 @@ export default function LoginForm() {
         title: "Login Successful",
         description: `Welcome, ${user.displayName || user.email}!`,
       });
-      router.push('/words'); // Redirect to words page
+      router.push('/'); // Redirect to home page
     } catch (e: any) {
       console.error(`${providerName} login error:`, e);
       let errorMessage = "An unexpected error occurred during social login.";
@@ -131,6 +133,8 @@ export default function LoginForm() {
         errorMessage = "Login cancelled. The sign-in popup was closed.";
       } else if (e.code === 'auth/cancelled-popup-request') {
         errorMessage = "Login cancelled. Multiple popup requests were made.";
+      } else if (e.code === 'auth/network-request-failed') {
+        errorMessage = "Network error. Please check your internet connection and Firebase configuration (including App ID in src/lib/firebase.ts).";
       } else if (e.code) {
         errorMessage = e.message;
       }
