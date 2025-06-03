@@ -9,12 +9,12 @@ import { getFirestore, type Firestore } from 'firebase/firestore'; // Added Fire
 // You can find this configuration in your Firebase project settings.
 // Firebase Authentication (especially social logins) will NOT work without this.
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY_HERE",
-  authDomain: "YOUR_AUTH_DOMAIN_HERE",
-  projectId: "YOUR_PROJECT_ID_HERE",
-  storageBucket: "YOUR_STORAGE_BUCKET_HERE",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID_HERE",
-  appId: "YOUR_APP_ID_HERE"
+  apiKey: "AIzaSyDeN1mxcNwQqOyBtLE2AgZoBzf5exPYBoc",
+  authDomain: "helplearn-5-by-5.firebaseapp.com",
+  projectId: "helplearn-5-by-5",
+  storageBucket: "helplearn-5-by-5.appspot.com",
+  messagingSenderId: "434056178407",
+  appId: "YOUR_APP_ID_HERE" // Please get this from your Firebase project settings
 };
 
 let app: FirebaseApp;
