@@ -8,7 +8,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Mail, Lock, User, Github, ChromeIcon } from "lucide-react";
+import { Mail, Lock, User, ChromeIcon } from "lucide-react"; // Removed Github icon
 import { useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { auth } from '@/lib/firebase';
 import { 
   GoogleAuthProvider, 
-  FacebookAuthProvider, 
+  // FacebookAuthProvider, // Removed FacebookAuthProvider
   signInWithPopup, 
   createUserWithEmailAndPassword,
   updateProfile,
@@ -56,12 +56,12 @@ export default function RegisterForm() {
     setIsLoading(true);
     setError(null);
 
-    if (auth.app.options.apiKey === "YOUR_API_KEY_HERE" || (auth.app.options.appId === "YOUR_APP_ID_HERE" && auth.app.options.apiKey !== "AIzaSyDeN1mxcNwQqOyBtLE2AgZoBzf5exPYBoc" /* Check if it's still the very initial placeholder vs the user provided one */)) {
-        setError("Firebase is not configured correctly. Please update src/lib/firebase.ts with your project credentials, including the App ID.");
+    if (auth.app.options.apiKey === "AIzaSyDeN1mxcNwQqOyBtLE2AgZoBzf5exPYBoc" && auth.app.options.appId === "YOUR_APP_ID_HERE") {
+        setError("Firebase is not configured correctly. Please update src/lib/firebase.ts with your project credentials, especially the App ID.");
         toast({
             variant: "destructive",
             title: "Configuration Error",
-            description: "Firebase credentials are missing or incomplete. Email/Password registration cannot proceed.",
+            description: "Firebase credentials (App ID) are missing. Email/Password registration cannot proceed.",
         });
         setIsLoading(false);
         return;
@@ -71,7 +71,7 @@ export default function RegisterForm() {
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       await updateProfile(userCredential.user, { displayName: data.name });
       toast({ title: "Registration Successful", description: "Welcome! Your account has been created. Please log in." });
-      router.push('/auth/login'); // Redirect to login page
+      router.push('/auth/login'); 
     } catch (e: any) {
       let errorMessage = "Failed to register. Please try again.";
       if (e.code === 'auth/email-already-in-use') {
@@ -80,6 +80,8 @@ export default function RegisterForm() {
         errorMessage = "The password is too weak. Please choose a stronger password.";
       } else if (e.code === 'auth/network-request-failed') {
         errorMessage = "Network error. Please check your internet connection and Firebase configuration (including App ID in src/lib/firebase.ts).";
+      } else if (e.code === 'auth/invalid-app-id') {
+        errorMessage = "Invalid App ID in Firebase configuration. Please check src/lib/firebase.ts.";
       }
       else if (e.message) {
         errorMessage = e.message;
@@ -90,17 +92,17 @@ export default function RegisterForm() {
     setIsLoading(false);
   }
 
-  const handleSocialSignup = async (providerName: 'Google' | 'Facebook') => {
+  const handleSocialSignup = async (providerName: 'Google') => { // Removed 'Facebook'
     setIsLoading(true);
     setError(null);
-    const provider = providerName === 'Google' ? new GoogleAuthProvider() : new FacebookAuthProvider();
+    const provider = new GoogleAuthProvider(); // Only Google provider
 
-    if (auth.app.options.apiKey === "YOUR_API_KEY_HERE" || (auth.app.options.appId === "YOUR_APP_ID_HERE" && auth.app.options.apiKey !== "AIzaSyDeN1mxcNwQqOyBtLE2AgZoBzf5exPYBoc")) {
-        setError("Firebase is not configured correctly. Please update src/lib/firebase.ts with your project credentials, including the App ID.");
+    if (auth.app.options.apiKey === "AIzaSyDeN1mxcNwQqOyBtLE2AgZoBzf5exPYBoc" && auth.app.options.appId === "YOUR_APP_ID_HERE") {
+        setError("Firebase is not configured correctly. Please update src/lib/firebase.ts with your project credentials, especially the App ID.");
         toast({
             variant: "destructive",
             title: "Configuration Error",
-            description: "Firebase credentials are missing or incomplete. Social signup cannot proceed.",
+            description: "Firebase credentials (App ID) are missing. Social signup cannot proceed.",
         });
         setIsLoading(false);
         return;
@@ -112,9 +114,9 @@ export default function RegisterForm() {
       console.log(`${providerName} signup successful:`, user);
       toast({
         title: "Sign Up Successful",
-        description: `Welcome, ${user.displayName || user.email}! Your account is ready. Redirecting to home...`,
+        description: `Welcome, ${user.displayName || user.email}! Your account is ready. Redirecting...`,
       });
-      router.push('/'); // Redirect to home page after social signup
+      router.push('/'); 
     } catch (e: any) {
       console.error(`${providerName} signup error:`, e);
       let errorMessage = "An unexpected error occurred during social signup.";
@@ -126,6 +128,8 @@ export default function RegisterForm() {
         errorMessage = "Signup cancelled. Multiple popup requests were made.";
       } else if (e.code === 'auth/network-request-failed') {
         errorMessage = "Network error. Please check your internet connection and Firebase configuration (including App ID in src/lib/firebase.ts).";
+      } else if (e.code === 'auth/invalid-app-id') {
+        errorMessage = "Invalid App ID in Firebase configuration. Please check src/lib/firebase.ts.";
       } else if (e.code) {
         errorMessage = e.message;
       }
@@ -221,13 +225,11 @@ export default function RegisterForm() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3"> {/* Changed to grid-cols-1 */}
           <Button variant="outline" type="button" onClick={() => handleSocialSignup('Google')} disabled={isLoading}>
             <ChromeIcon className="mr-2 h-4 w-4" /> Google
           </Button>
-          <Button variant="outline" type="button" onClick={() => handleSocialSignup('Facebook')} disabled={isLoading}>
-            <Github className="mr-2 h-4 w-4" /> Facebook {/* Using Github as placeholder */}
-          </Button>
+          {/* Facebook button removed */}
         </div>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">

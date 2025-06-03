@@ -8,7 +8,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Mail, Lock, Github, ChromeIcon } from "lucide-react";
+import { Mail, Lock, ChromeIcon } from "lucide-react"; // Removed Github icon
 import { useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { auth } from '@/lib/firebase';
 import { 
   GoogleAuthProvider, 
-  FacebookAuthProvider, 
+  // FacebookAuthProvider, // Removed FacebookAuthProvider
   signInWithPopup, 
   signInWithEmailAndPassword,
   type UserCredential 
@@ -62,18 +62,17 @@ export default function LoginForm() {
         title: "Login Successful (Test Mode)", 
         description: `Welcome back, admin@gmail.com! You are logged in for testing.` 
       });
-      router.push('/'); // Redirect to home page
+      router.push('/'); 
       setIsLoading(false);
       return; 
     }
 
-    // Regular Firebase Email/Password Login Logic
-    if (auth.app.options.apiKey === "YOUR_API_KEY_HERE" || (auth.app.options.appId === "YOUR_APP_ID_HERE" && auth.app.options.apiKey !== "AIzaSyDeN1mxcNwQqOyBtLE2AgZoBzf5exPYBoc")) {
-        setError("Firebase is not configured correctly. Please update src/lib/firebase.ts with your project credentials, including the App ID.");
+    if (auth.app.options.apiKey === "AIzaSyDeN1mxcNwQqOyBtLE2AgZoBzf5exPYBoc" && auth.app.options.appId === "YOUR_APP_ID_HERE") {
+        setError("Firebase is not configured correctly. Please update src/lib/firebase.ts with your project credentials, especially the App ID.");
         toast({
             variant: "destructive",
             title: "Configuration Error",
-            description: "Firebase credentials are missing or incomplete. Email/Password login cannot proceed.",
+            description: "Firebase credentials (App ID) are missing. Email/Password login cannot proceed.",
         });
         setIsLoading(false);
         return;
@@ -82,13 +81,15 @@ export default function LoginForm() {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       toast({ title: "Login Successful", description: `Welcome back, ${userCredential.user.email}!` });
-      router.push('/'); // Redirect to home page
+      router.push('/'); 
     } catch (e: any) {
       let errorMessage = "Failed to log in. Please check your email and password.";
       if (e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
         errorMessage = "Invalid email or password. Please try again.";
       } else if (e.code === 'auth/network-request-failed') {
         errorMessage = "Network error. Please check your internet connection and Firebase configuration (including App ID in src/lib/firebase.ts).";
+      } else if (e.code === 'auth/invalid-app-id') {
+        errorMessage = "Invalid App ID in Firebase configuration. Please check src/lib/firebase.ts.";
       }
       else if (e.message) {
         errorMessage = e.message;
@@ -99,17 +100,17 @@ export default function LoginForm() {
     setIsLoading(false);
   }
 
-  const handleSocialLogin = async (providerName: 'Google' | 'Facebook') => {
+  const handleSocialLogin = async (providerName: 'Google') => { // Removed 'Facebook'
     setIsLoading(true);
     setError(null);
-    const provider = providerName === 'Google' ? new GoogleAuthProvider() : new FacebookAuthProvider();
+    const provider = new GoogleAuthProvider(); // Only Google provider
 
-    if (auth.app.options.apiKey === "YOUR_API_KEY_HERE" || (auth.app.options.appId === "YOUR_APP_ID_HERE" && auth.app.options.apiKey !== "AIzaSyDeN1mxcNwQqOyBtLE2AgZoBzf5exPYBoc")) {
-        setError("Firebase is not configured correctly. Please update src/lib/firebase.ts with your project credentials, including the App ID.");
+    if (auth.app.options.apiKey === "AIzaSyDeN1mxcNwQqOyBtLE2AgZoBzf5exPYBoc" && auth.app.options.appId === "YOUR_APP_ID_HERE") {
+        setError("Firebase is not configured correctly. Please update src/lib/firebase.ts with your project credentials, especially the App ID.");
         toast({
             variant: "destructive",
             title: "Configuration Error",
-            description: "Firebase credentials are missing or incomplete. Social login cannot proceed.",
+            description: "Firebase credentials (App ID) are missing. Social login cannot proceed.",
         });
         setIsLoading(false);
         return;
@@ -123,7 +124,7 @@ export default function LoginForm() {
         title: "Login Successful",
         description: `Welcome, ${user.displayName || user.email}!`,
       });
-      router.push('/'); // Redirect to home page
+      router.push('/'); 
     } catch (e: any) {
       console.error(`${providerName} login error:`, e);
       let errorMessage = "An unexpected error occurred during social login.";
@@ -135,6 +136,8 @@ export default function LoginForm() {
         errorMessage = "Login cancelled. Multiple popup requests were made.";
       } else if (e.code === 'auth/network-request-failed') {
         errorMessage = "Network error. Please check your internet connection and Firebase configuration (including App ID in src/lib/firebase.ts).";
+      } else if (e.code === 'auth/invalid-app-id') {
+        errorMessage = "Invalid App ID in Firebase configuration. Please check src/lib/firebase.ts.";
       } else if (e.code) {
         errorMessage = e.message;
       }
@@ -210,13 +213,11 @@ export default function LoginForm() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3"> {/* Changed to grid-cols-1 */}
           <Button variant="outline" type="button" onClick={() => handleSocialLogin('Google')} disabled={isLoading}>
             <ChromeIcon className="mr-2 h-4 w-4" /> Google
           </Button>
-          <Button variant="outline" type="button" onClick={() => handleSocialLogin('Facebook')} disabled={isLoading}>
-            <Github className="mr-2 h-4 w-4" /> Facebook {/* Using Github as placeholder */}
-          </Button>
+          {/* Facebook button removed */}
         </div>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
