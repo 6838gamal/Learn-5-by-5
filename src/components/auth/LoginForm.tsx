@@ -8,7 +8,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Mail, Lock, ChromeIcon } from "lucide-react"; // Removed Github icon
+import { Mail, Lock, ChromeIcon } from "lucide-react";
 import { useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
@@ -17,7 +17,6 @@ import { useToast } from "@/hooks/use-toast";
 import { auth } from '@/lib/firebase';
 import { 
   GoogleAuthProvider, 
-  // FacebookAuthProvider, // Removed FacebookAuthProvider
   signInWithPopup, 
   signInWithEmailAndPassword,
   type UserCredential 
@@ -39,8 +38,8 @@ export default function LoginForm() {
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
     defaultValues: {
-      email: "admin@gmail.com", // Pre-fill for convenience in test mode
-      password: "admingamal", // Pre-fill for convenience in test mode
+      email: "admin@gmail.com", 
+      password: "admingamal", 
     },
   });
 
@@ -48,11 +47,7 @@ export default function LoginForm() {
     setIsLoading(true);
     setError(null);
 
-    // --------------- TEST MODE FLAG ---------------
-    // Set to true to bypass Firebase email/password login and simulate success.
-    // Set to false for normal Firebase email/password login.
-    const IS_TEST_MODE = false; // Set to false for actual Firebase login
-    // --------------------------------------------
+    const IS_TEST_MODE = false; 
 
     if (IS_TEST_MODE && data.email === "admin@gmail.com" && data.password === "admingamal") {
       console.log("TEST MODE ACTIVE: Simulating login for admin@gmail.com");
@@ -67,12 +62,13 @@ export default function LoginForm() {
       return; 
     }
 
-    if (auth.app.options.apiKey === "AIzaSyDeN1mxcNwQqOyBtLE2AgZoBzf5exPYBoc" && auth.app.options.appId === "YOUR_APP_ID_HERE") {
-        setError("Firebase is not configured correctly. Please update src/lib/firebase.ts with your project credentials, especially the App ID.");
+    if (auth.app.options.appId === "YOUR_APP_ID_HERE") {
+        const configErrorMessage = "Firebase configuration error: The 'appId' in src/lib/firebase.ts is still the placeholder 'YOUR_APP_ID_HERE'. Please update it with your actual App ID from the Firebase console.";
+        setError(configErrorMessage);
         toast({
             variant: "destructive",
             title: "Configuration Error",
-            description: "Firebase credentials (App ID) are missing. Email/Password login cannot proceed.",
+            description: configErrorMessage,
         });
         setIsLoading(false);
         return;
@@ -89,7 +85,7 @@ export default function LoginForm() {
       } else if (e.code === 'auth/network-request-failed') {
         errorMessage = "Network error. Please check your internet connection and Firebase configuration (including App ID in src/lib/firebase.ts).";
       } else if (e.code === 'auth/invalid-app-id') {
-        errorMessage = "Invalid App ID in Firebase configuration. Please check src/lib/firebase.ts.";
+        errorMessage = "Invalid App ID in Firebase configuration. This usually means the 'appId' in src/lib/firebase.ts is incorrect or missing. Please verify it with your Firebase project settings.";
       }
       else if (e.message) {
         errorMessage = e.message;
@@ -100,17 +96,18 @@ export default function LoginForm() {
     setIsLoading(false);
   }
 
-  const handleSocialLogin = async (providerName: 'Google') => { // Removed 'Facebook'
+  const handleSocialLogin = async (providerName: 'Google') => { 
     setIsLoading(true);
     setError(null);
-    const provider = new GoogleAuthProvider(); // Only Google provider
+    const provider = new GoogleAuthProvider(); 
 
-    if (auth.app.options.apiKey === "AIzaSyDeN1mxcNwQqOyBtLE2AgZoBzf5exPYBoc" && auth.app.options.appId === "YOUR_APP_ID_HERE") {
-        setError("Firebase is not configured correctly. Please update src/lib/firebase.ts with your project credentials, especially the App ID.");
+    if (auth.app.options.appId === "YOUR_APP_ID_HERE") {
+        const configErrorMessage = "Firebase configuration error: The 'appId' in src/lib/firebase.ts is still the placeholder 'YOUR_APP_ID_HERE'. Please update it with your actual App ID from the Firebase console for social logins to work.";
+        setError(configErrorMessage);
         toast({
             variant: "destructive",
             title: "Configuration Error",
-            description: "Firebase credentials (App ID) are missing. Social login cannot proceed.",
+            description: configErrorMessage,
         });
         setIsLoading(false);
         return;
@@ -137,7 +134,7 @@ export default function LoginForm() {
       } else if (e.code === 'auth/network-request-failed') {
         errorMessage = "Network error. Please check your internet connection and Firebase configuration (including App ID in src/lib/firebase.ts).";
       } else if (e.code === 'auth/invalid-app-id') {
-        errorMessage = "Invalid App ID in Firebase configuration. Please check src/lib/firebase.ts.";
+         errorMessage = "Invalid App ID in Firebase configuration for social login. This usually means the 'appId' in src/lib/firebase.ts is incorrect or missing. Please verify it with your Firebase project settings.";
       } else if (e.code) {
         errorMessage = e.message;
       }
@@ -213,11 +210,10 @@ export default function LoginForm() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3"> {/* Changed to grid-cols-1 */}
+        <div className="grid grid-cols-1 gap-3"> 
           <Button variant="outline" type="button" onClick={() => handleSocialLogin('Google')} disabled={isLoading}>
             <ChromeIcon className="mr-2 h-4 w-4" /> Google
           </Button>
-          {/* Facebook button removed */}
         </div>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
