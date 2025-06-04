@@ -95,3 +95,12 @@ export const TARGET_FIELDS: SelectionOption[] = [
   { value: "business_communication", label: "Business Communication" },
   { value: "academic_writing", label: "Academic Writing" },
 ];
+
+export const SUPPORT_CATEGORIES: SelectionOption[] = [
+  { value: "general_inquiry", label: "General Inquiry" },
+  { value: "technical_issue", label: "Technical Issue" },
+  { value: "account_billing", label: "Account & Billing" },
+  { value: "feature_request", label: "Feature Request" },
+  { value: "feedback_suggestion", label: "Feedback & Suggestion" },
+  { value: "other", label: "Other" },
+];

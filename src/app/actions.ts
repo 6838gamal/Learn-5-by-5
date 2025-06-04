@@ -95,7 +95,7 @@ export async function handleGenerateConversation(
   }
 }
 
-// --- New Actions for Firestore Activity Logging and Fetching ---
+// --- Activity Logging and Fetching Actions ---
 
 const LogWordSetActivityInputSchema = z.object({
   userId: z.string().min(1, "User ID is required."),
@@ -181,5 +181,45 @@ export async function fetchUserLearningStatsAction(data: {userId: string}): Prom
   } catch (e) {
     console.error("Error fetching user learning stats:", e);
     return { error: e instanceof Error ? e.message : "Failed to fetch learning stats." };
+  }
+}
+
+// --- Support Request Action (Conceptual) ---
+const SupportRequestInputSchema = z.object({
+  email: z.string().email("Invalid email address.").min(1, "Email is required."),
+  subject: z.string().min(3, "Subject must be at least 3 characters.").max(100, "Subject is too long."),
+  category: z.string().min(1, "Please select a category."),
+  description: z.string().min(10, "Description must be at least 10 characters.").max(2000, "Description is too long."),
+  userId: z.string().optional(), // Optional: if the user is logged in
+});
+export type SupportRequestInput = z.infer<typeof SupportRequestInputSchema>;
+
+export interface HandleSupportRequestResult {
+  success?: boolean;
+  message?: string;
+  error?: string;
+  errors?: z.ZodIssue[];
+}
+
+export async function handleSupportRequest(data: SupportRequestInput): Promise<HandleSupportRequestResult> {
+  try {
+    const validatedData = SupportRequestInputSchema.parse(data);
+    console.log("Support Request Received (Conceptual):", validatedData);
+
+    // In a real application, you would:
+    // 1. Save this data to a database (e.g., a 'support_tickets' collection in Firestore).
+    // 2. Potentially send an email to your support team.
+    // 3. Potentially send a confirmation email to the user.
+
+    // For this prototype, we just simulate success.
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate async operation
+
+    return { success: true, message: "Your support request has been submitted successfully! We'll get back to you soon." };
+  } catch (e) {
+    console.error("Error handling support request:", e);
+    if (e instanceof z.ZodError) {
+      return { error: "Validation failed. Please check your input.", errors: e.errors };
+    }
+    return { error: e instanceof Error ? e.message : "An unexpected error occurred. Please try again." };
   }
 }
