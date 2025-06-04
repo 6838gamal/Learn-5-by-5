@@ -3,29 +3,44 @@
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
+import { getStorage, type FirebaseStorage } from 'firebase/storage';
+// import { getAnalytics, type Analytics } from "firebase/analytics"; // Optional: if you plan to use Firebase Analytics
 
-// IMPORTANT:
-// The configuration below is based on your "learn-5-by-5" project.
-// Please ensure the appId below is updated with your actual App ID
-// from the Firebase console for full Firebase functionality.
+// User-provided Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDeN1mxcNwQqOyBtLE2AgZoBzf5exPYBoc",
   authDomain: "learn-5-by-5.firebaseapp.com",
   projectId: "learn-5-by-5",
-  storageBucket: "learn-5-by-5.appspot.com",
+  storageBucket: "learn-5-by-5.firebasestorage.app", // Corrected based on user's config
   messagingSenderId: "434056178407",
-  appId: "YOUR_APP_ID_HERE" // CRITICAL: Please replace this with your actual App ID from Firebase Project Settings!
+  appId: "1:434056178407:web:b530c6318de3bb58471042", // Correct App ID
+  measurementId: "G-DJRHLSN6TV" // Added Measurement ID
 };
 
 let app: FirebaseApp;
+// let analytics: Analytics; // Optional: if you plan to use Firebase Analytics
 
 if (!getApps().length) {
   app = initializeApp(firebaseConfig);
+  // Optional: Initialize Analytics if measurementId is present and you want to use it
+  // if (firebaseConfig.measurementId) {
+  //   analytics = getAnalytics(app);
+  // }
 } else {
   app = getApps()[0];
+  // Optional: Get Analytics instance if app was already initialized
+  // if (firebaseConfig.measurementId && typeof window !== 'undefined') { // Check for window for client-side
+  //   try {
+  //     analytics = getAnalytics(app);
+  //   } catch (e) {
+  //     console.warn("Firebase Analytics could not be initialized (perhaps already initialized or in server context).")
+  //   }
+  // }
 }
 
 const auth: Auth = getAuth(app);
-const db: Firestore = getFirestore(app); // Initialized Firestore
+const db: Firestore = getFirestore(app);
+const storage: FirebaseStorage = getStorage(app);
 
-export { app, auth, db }; // Export db
+// Export 'analytics' if you decide to use it
+export { app, auth, db, storage };
