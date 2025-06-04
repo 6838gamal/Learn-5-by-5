@@ -9,12 +9,14 @@ import {
   Menu, 
   StepForward, 
   Mic, 
-  Wand2, // Changed from Type
+  Wand2, 
   ClipboardList, 
   MessagesSquare, 
   Award, 
   Settings as SettingsIcon,
-  LogOut
+  LogOut,
+  LifeBuoy, // Added for Support
+  Gift      // Added for Donate
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -95,10 +97,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const navItems: NavItemProps[] = [
     { href: "/", icon: Home, label: "Home" }, 
     { href: "/sounds", icon: Mic, label: "Sounds" },
-    { href: "/words", icon: Wand2, label: "Generate Words" }, // Updated label and icon
+    { href: "/words", icon: Wand2, label: "Generate Words" },
     { href: "/exercises", icon: ClipboardList, label: "Exercises" },
     { href: "/conversations", icon: MessagesSquare, label: "Conversations" },
     { href: "/exams", icon: Award, label: "Exams" },
+    { href: "/support", icon: LifeBuoy, label: "Support" }, // Added Support
+    { href: "/donate", icon: Gift, label: "Donate" },       // Added Donate
     { href: "/settings", icon: SettingsIcon, label: "Settings" },
     { label: "Logout", icon: LogOut, onClick: handleLogout },
   ];
