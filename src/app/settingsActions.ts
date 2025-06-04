@@ -18,6 +18,9 @@ const SaveSettingsInputSchema = z.object({
   settings: z.object({
     numberOfWords: z.enum(["3", "5"]).transform(val => parseInt(val, 10) as NumberOfWordsSetting).optional(),
     appLanguage: z.enum(["en", "es", "fr", "ar"]).optional(),
+    targetLanguage: z.string().optional(), // New
+    targetField: z.string().optional(), // New
+    enableAccessibilityAids: z.boolean().optional(), // New
     // Add conceptual settings here if they were to be validated and saved
     // textSize: z.enum(["small", "medium", "large"]).optional(),
     // colorContrast: z.enum(["default", "high-light", "high-dark"]).optional(),
@@ -62,7 +65,7 @@ export async function fetchUserSettingsAction(data: { userId: string }): Promise
  * Saves user settings. Requires userId and settings object.
  */
 export async function saveUserSettingsAction(
-  data: { userId: string; settings: Partial<Pick<UserSettings, 'numberOfWords' | 'appLanguage'>> }
+  data: { userId: string; settings: Partial<Pick<UserSettings, 'numberOfWords' | 'appLanguage' | 'targetLanguage' | 'targetField' | 'enableAccessibilityAids'>> }
 ): Promise<SaveSettingsActionResult> {
   try {
     // Construct the object to validate based on how data is passed from client
@@ -71,19 +74,28 @@ export async function saveUserSettingsAction(
         settings: {
             ...(data.settings.numberOfWords !== undefined && { numberOfWords: data.settings.numberOfWords.toString() }),
             ...(data.settings.appLanguage !== undefined && { appLanguage: data.settings.appLanguage }),
+            ...(data.settings.targetLanguage !== undefined && { targetLanguage: data.settings.targetLanguage }),
+            ...(data.settings.targetField !== undefined && { targetField: data.settings.targetField }),
+            ...(data.settings.enableAccessibilityAids !== undefined && { enableAccessibilityAids: data.settings.enableAccessibilityAids }),
         }
     };
     const validatedData = SaveSettingsInputSchema.parse(inputToValidate);
     
-    // The validatedData.settings will have transformed numberOfWords to number
-    // and other fields if they were present and valid.
-    // We need to pass the correctly typed (and potentially filtered) settings to the DB function.
     const settingsToSave: Partial<UserSettings> = {};
     if (validatedData.settings.numberOfWords !== undefined) {
         settingsToSave.numberOfWords = validatedData.settings.numberOfWords;
     }
     if (validatedData.settings.appLanguage !== undefined) {
         settingsToSave.appLanguage = validatedData.settings.appLanguage;
+    }
+    if (validatedData.settings.targetLanguage !== undefined) {
+        settingsToSave.targetLanguage = validatedData.settings.targetLanguage;
+    }
+    if (validatedData.settings.targetField !== undefined) {
+        settingsToSave.targetField = validatedData.settings.targetField;
+    }
+    if (validatedData.settings.enableAccessibilityAids !== undefined) {
+        settingsToSave.enableAccessibilityAids = validatedData.settings.enableAccessibilityAids;
     }
 
     if (Object.keys(settingsToSave).length === 0) {
@@ -113,4 +125,23 @@ export async function getAppLanguageSettingAction(userId: string): Promise<AppLa
   if (!userId) return defaultUserSettings.appLanguage;
   const result = await fetchUserSettingsAction({ userId });
   return result.settings?.appLanguage || defaultUserSettings.appLanguage;
+}
+
+// Convenience getters for new settings
+export async function getTargetLanguageSettingAction(userId: string): Promise<string | undefined> {
+  if (!userId) return defaultUserSettings.targetLanguage;
+  const result = await fetchUserSettingsAction({ userId });
+  return result.settings?.targetLanguage || defaultUserSettings.targetLanguage;
+}
+
+export async function getTargetFieldSettingAction(userId: string): Promise<string | undefined> {
+  if (!userId) return defaultUserSettings.targetField;
+  const result = await fetchUserSettingsAction({ userId });
+  return result.settings?.targetField || defaultUserSettings.targetField;
+}
+
+export async function getEnableAccessibilityAidsSettingAction(userId: string): Promise<boolean | undefined> {
+  if (!userId) return defaultUserSettings.enableAccessibilityAids;
+  const result = await fetchUserSettingsAction({ userId });
+  return result.settings?.enableAccessibilityAids || defaultUserSettings.enableAccessibilityAids;
 }

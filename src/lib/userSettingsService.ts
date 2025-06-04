@@ -1,6 +1,5 @@
 
 // src/lib/userSettingsService.ts
-// REMOVED 'use server'; directive from here
 
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase'; // Import Firestore instance
@@ -11,6 +10,9 @@ export type AppLanguageSetting = "en" | "es" | "fr" | "ar";
 export interface UserSettings {
   numberOfWords: NumberOfWordsSetting;
   appLanguage: AppLanguageSetting;
+  targetLanguage?: string; // New: For preferred learning language
+  targetField?: string; // New: For preferred field of knowledge
+  enableAccessibilityAids?: boolean; // New: For accessibility features
   updatedAt?: any; // For Firestore server timestamp
   // Add other conceptual settings if they were to be persisted
   // textSize?: "small" | "medium" | "large";
@@ -23,6 +25,9 @@ const USER_SETTINGS_DOC_PATH = (userId: string) => `users/${userId}/settings/app
 export const defaultUserSettings: UserSettings = {
   numberOfWords: 5,
   appLanguage: "en",
+  targetLanguage: "en", // Default to English
+  targetField: "daily_conversation", // Default to a common field
+  enableAccessibilityAids: false,
 };
 
 /**
@@ -46,13 +51,12 @@ export async function getUserSettings(userId: string): Promise<UserSettings> {
       return {
         numberOfWords: data.numberOfWords === 3 || data.numberOfWords === 5 ? data.numberOfWords : defaultUserSettings.numberOfWords,
         appLanguage: ["en", "es", "fr", "ar"].includes(data.appLanguage) ? data.appLanguage : defaultUserSettings.appLanguage,
-        // conceptual settings if added:
-        // textSize: data.textSize || defaultUserSettings.textSize,
-        // colorContrast: data.colorContrast || defaultUserSettings.colorContrast,
+        targetLanguage: typeof data.targetLanguage === 'string' ? data.targetLanguage : defaultUserSettings.targetLanguage,
+        targetField: typeof data.targetField === 'string' ? data.targetField : defaultUserSettings.targetField,
+        enableAccessibilityAids: typeof data.enableAccessibilityAids === 'boolean' ? data.enableAccessibilityAids : defaultUserSettings.enableAccessibilityAids,
       };
     } else {
-      // No settings document found, return defaults (and potentially create one)
-      // For now, just return defaults. Creating one could be done here or on first save.
+      // No settings document found, return defaults
       return defaultUserSettings;
     }
   } catch (error) {
@@ -86,4 +90,3 @@ export async function updateUserSettings(userId: string, settings: Partial<UserS
     throw error; // Re-throw to be handled by the caller
   }
 }
-
