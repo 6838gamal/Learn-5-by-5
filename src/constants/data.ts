@@ -6,10 +6,15 @@ export interface SelectionOption {
   emoji?: string;
 }
 
+// Note: For App Language in Settings, "value" will be "en", "ar", "es", "fr"
+// while label can be more descriptive like "English (Default)"
+// The LANGUAGES constant is used for UI display in Select components
 export const LANGUAGES: SelectionOption[] = [
-  { value: "English", label: "English", description: "The global lingua franca.", emoji: "🇬🇧" },
-  { value: "Spanish", label: "Spanish", description: "Spoken in Spain and most of Latin America.", emoji: "🇪🇸" },
-  { value: "French", label: "French", description: "Official language in 29 countries.", emoji: "🇫🇷" },
+  { value: "en", label: "English", description: "The global lingua franca.", emoji: "🇬🇧" },
+  { value: "ar", label: "العربية (Arabic)", description: "Official language in many countries.", emoji: "🇸🇦" },
+  { value: "es", label: "Español (Spanish)", description: "Spoken in Spain and most of Latin America.", emoji: "🇪🇸" },
+  { value: "fr", label: "Français (French)", description: "Official language in 29 countries.", emoji: "🇫🇷" },
+  // These were for a different selector initially, keeping for potential future use or cleanup
   { value: "German", label: "German", description: "Most spoken native language in the EU.", emoji: "🇩🇪" },
   { value: "Italian", label: "Italian", description: "Language of art, music, and cuisine.", emoji: "🇮🇹" },
   { value: "Portuguese", label: "Portuguese", description: "Spoken in Portugal and Brazil.", emoji: "🇵🇹" },

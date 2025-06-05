@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from '@/components/ui/separator';
-import { Checkbox } from '@/components/ui/checkbox'; // Added Checkbox
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { 
   fetchUserSettingsAction, 
@@ -19,9 +19,11 @@ import {
   type SaveSettingsActionResult
 } from '@/app/settingsActions';
 import type { NumberOfWordsSetting, AppLanguageSetting, UserSettings } from '@/lib/userSettingsService';
-import { TARGET_LANGUAGES, TARGET_FIELDS, LANGUAGES as APP_LANGUAGES_OPTIONS } from '@/constants/data'; // Added TARGET_LANGUAGES, TARGET_FIELDS
+import { TARGET_LANGUAGES, TARGET_FIELDS, LANGUAGES as APP_LANGUAGES_OPTIONS } from '@/constants/data';
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
+
+const FREE_APP_LANGUAGES: AppLanguageSetting[] = ["en", "ar"];
 
 export default function SettingsPage() {
   const { toast } = useToast();
@@ -96,12 +98,24 @@ export default function SettingsPage() {
     const result: SaveSettingsActionResult = await saveUserSettingsAction({ userId: currentUser.uid, settings: settingsToSave });
 
     if (result.success) {
+      let titleMessage = "Settings Saved";
       let descriptionMessage = "Your preferences have been updated.";
-      if (Object.keys(settingsToSave).includes('appLanguage')) {
-        descriptionMessage += " Note: App display language change is currently conceptual and will not yet change the interface language.";
+
+      if (Object.keys(settingsToSave).includes('appLanguage') && settingsToSave.appLanguage) {
+        const chosenLang = settingsToSave.appLanguage;
+        const isFree = FREE_APP_LANGUAGES.includes(chosenLang);
+        const langLabel = APP_LANGUAGES_OPTIONS.find(l => l.value.toLowerCase().startsWith(chosenLang.toLowerCase()))?.label || chosenLang;
+
+        if (isFree) {
+          descriptionMessage += ` Note: App display language change to ${langLabel} is currently conceptual and will not yet change the interface language.`;
+        } else {
+          // Premium language chosen
+          descriptionMessage = `${langLabel} is a premium feature. Please upgrade to use it as your display language. Your preference has been saved, but the interface language will not change yet.`;
+        }
       }
+      
       toast({ 
-        title: "Settings Saved", 
+        title: titleMessage, 
         description: descriptionMessage
       });
     } else if (result.error) {
@@ -130,7 +144,7 @@ export default function SettingsPage() {
   }, [pendingTargetLanguage]);
 
   const appLanguageDisplayNode = React.useMemo(() => {
-    const lang = APP_LANGUAGES_OPTIONS.find(l => l.value.toLowerCase().startsWith(pendingAppLanguage.toLowerCase())); // Match existing app languages like "English" from full list
+    const lang = APP_LANGUAGES_OPTIONS.find(l => l.value.toLowerCase().startsWith(pendingAppLanguage.toLowerCase()));
     return lang ? (
         <div className="flex items-center gap-2">
           {lang.emoji && <span className="text-lg">{lang.emoji}</span>}
@@ -323,13 +337,13 @@ export default function SettingsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="en">English (Default)</SelectItem>
-                <SelectItem value="es">Español (Spanish - Conceptual)</SelectItem>
-                <SelectItem value="fr">Français (French - Conceptual)</SelectItem>
-                <SelectItem value="ar">العربية (Arabic - Conceptual)</SelectItem>
+                <SelectItem value="ar">العربية (Arabic)</SelectItem>
+                <SelectItem value="es">Español (Spanish - Premium)</SelectItem>
+                <SelectItem value="fr">Français (French - Premium)</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-sm text-muted-foreground">
-              Change the display language of the LinguaLeap interface. (This is a conceptual control.)
+              Choose your preferred display language for the LinguaLeap interface. English and Arabic are free. Other languages are premium features.
             </p>
           </div>
           
@@ -441,4 +455,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
