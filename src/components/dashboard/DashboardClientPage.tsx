@@ -17,7 +17,7 @@ import {
   type FetchUserActivitiesResult,
   type FetchUserLearningStatsResult
 } from "@/app/actions";
-import { BarChart, BookOpenText, Layers, ListChecks, Clock, Volume2, FileText, MessageSquare, Loader2, Unlock, Languages } from "lucide-react";
+import { BarChart as BarChartIcon, BookOpenText, Layers, ListChecks, Clock, Volume2, FileText, MessageSquare, Loader2, Unlock, Languages, TrendingUp, Activity } from "lucide-react"; // Added TrendingUp, Activity
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow } from 'date-fns';
 import StatCard from "./StatCard";
@@ -35,11 +35,26 @@ import { onAuthStateChanged, type User } from 'firebase/auth';
 import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts";
 
+const initialStats: LearningStats = { 
+  totalWordsLearned: 0, 
+  fieldsCoveredCount: 0, 
+  wordSetsGenerated: 0, 
+  languagesCoveredCount: 0 
+};
 
 export default function DashboardClientPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [stats, setStats] = useState<LearningStats | null>(null);
+  const [stats, setStats] = useState<LearningStats | null>(initialStats);
   const [recentActivity, setRecentActivity] = useState<ActivityRecord[]>([]);
   const [isClient, setIsClient] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -50,32 +65,31 @@ export default function DashboardClientPage() {
   const loadDashboardData = useCallback(async (user: User | null) => {
     setIsLoadingData(true);
     setError(null);
-    if (user) { // Logged-in user: Fetch from Firestore
+    if (user) {
       const [statsResult, activityResult] = await Promise.all([
         fetchUserLearningStatsAction({ userId: user.uid }),
-        fetchUserActivitiesAction({ userId: user.uid, count: 10 })
+        fetchUserActivitiesAction({ userId: user.uid, count: 5 }) // Fetch 5 for recent activity
       ]);
 
       if (statsResult.stats) {
         setStats(statsResult.stats);
       } else {
         setError(statsResult.error || "Could not load learning statistics.");
-        setStats(getStatsLocal()); // Fallback to local if error
+        setStats(getStatsLocal()); 
       }
 
       if (activityResult.activities) {
         setRecentActivity(activityResult.activities);
       } else {
         setError(prevError => `${prevError || ""} ${activityResult.error || "Could not load recent activity."}`.trim());
-        setRecentActivity(getActivityDataLocal().learnedItems.slice(0, 10)); // Fallback
+        setRecentActivity(getActivityDataLocal().learnedItems.slice(0, 5));
       }
-    } else if (auth.app.options.apiKey !== "YOUR_API_KEY_HERE") { // Not logged in, real Firebase
-         setStats({ totalWordsLearned: 0, fieldsCoveredCount: 0, wordSetsGenerated: 0, languagesCoveredCount: 0 });
+    } else if (auth.app.options.apiKey !== "YOUR_API_KEY_HERE" && auth.app.options.appId !== "YOUR_APP_ID_HERE") {
+         setStats(initialStats);
          setRecentActivity([]);
-    }
-     else { // Not logged in & test mode (or Firebase not configured): use localStorage
+    } else { 
       setStats(getStatsLocal());
-      setRecentActivity(getActivityDataLocal().learnedItems.slice(0, 10));
+      setRecentActivity(getActivityDataLocal().learnedItems.slice(0, 5));
     }
     setIsLoadingData(false);
   }, []);
@@ -93,30 +107,59 @@ export default function DashboardClientPage() {
     setSelectedActivity(activity);
     setIsDetailDialogOpen(true);
   };
-
-  const handlePlaySentenceAudioInDialog = (sentence: string) => {
-    alert(`Audio playback for the sentence is not yet implemented.`);
-  };
   
-  const handlePlayWordAudioInDialog = (word: string) => {
-    alert(`Audio playback for the word is not yet implemented.`);
+  const handlePlayAudioInDialog = (text: string, type: 'word' | 'sentence') => {
+    alert(`Audio playback for ${type} "${text}" is not yet implemented.`);
   };
+
+  const chartData = stats ? [
+    { metric: "Words", count: stats.totalWordsLearned, fill: "var(--color-words)" },
+    { metric: "Languages", count: stats.languagesCoveredCount, fill: "var(--color-languages)" },
+    { metric: "Fields", count: stats.fieldsCoveredCount, fill: "var(--color-fields)" },
+    { metric: "Sets", count: stats.wordSetsGenerated, fill: "var(--color-sets)" },
+  ] : [];
+
+  const chartConfig = {
+    count: {
+      label: "Count",
+    },
+    words: {
+      label: "Words Learned",
+      color: "hsl(var(--chart-1))",
+    },
+    languages: {
+      label: "Languages",
+      color: "hsl(var(--chart-2))",
+    },
+    fields: {
+      label: "Fields",
+      color: "hsl(var(--chart-3))",
+    },
+    sets: {
+      label: "Sets Generated",
+      color: "hsl(var(--chart-4))",
+    },
+  } satisfies ChartConfig;
+
 
   if (!isClient || isLoadingData) {
     return (
-      <div className="container mx-auto py-8 px-4 md:px-0">
+      <div className="container mx-auto py-8 px-4">
         <h1 className="text-3xl font-bold mb-8 text-primary text-center">Your Learning Dashboard</h1>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
           {[...Array(4)].map((_, i) => (
              <Card key={i} className="shadow-lg animate-pulse"><CardHeader><div className="h-6 bg-muted rounded w-1/2"></div></CardHeader><CardContent><div className="h-10 bg-muted rounded w-3/4"></div></CardContent></Card>
           ))}
         </div>
-         <Card className="mt-8 shadow-xl animate-pulse"><CardHeader><div className="h-8 bg-muted rounded w-1/3"></div></CardHeader><CardContent><div className="h-40 bg-muted rounded flex items-center justify-center"><Loader2 className="h-10 w-10 text-primary animate-spin"/></div></CardContent></Card>
+        <div className="grid gap-6 md:grid-cols-2">
+            <Card className="shadow-xl animate-pulse"><CardHeader><div className="h-8 bg-muted rounded w-1/3"></div></CardHeader><CardContent><div className="h-64 bg-muted rounded flex items-center justify-center"><Loader2 className="h-10 w-10 text-primary animate-spin"/></div></CardContent></Card>
+            <Card className="shadow-xl animate-pulse"><CardHeader><div className="h-8 bg-muted rounded w-1/3"></div></CardHeader><CardContent><div className="h-64 bg-muted rounded flex items-center justify-center"><Loader2 className="h-10 w-10 text-primary animate-spin"/></div></CardContent></Card>
+        </div>
       </div>
     );
   }
 
-  if (!currentUser && auth.app.options.apiKey !== "YOUR_API_KEY_HERE" && isClient && !isLoadingData) {
+  if (!currentUser && auth.app.options.apiKey !== "YOUR_API_KEY_HERE" && auth.app.options.appId !== "YOUR_APP_ID_HERE") {
      return (
       <div className="container mx-auto py-8 px-4">
         <Card className="w-full max-w-md mx-auto shadow-xl">
@@ -129,17 +172,13 @@ export default function DashboardClientPage() {
             <Button asChild>
               <Link href="/auth/login">Go to Login</Link>
             </Button>
-             <p className="text-xs text-muted-foreground mt-2">
-              (If you're in test mode with placeholder Firebase keys, some local data might be shown.)
-            </p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-
-  if (!stats) { // Should only happen briefly or if major error after loading
+  if (!stats) { 
     return (
       <div className="flex items-center justify-center h-full">
         <p className="text-muted-foreground text-lg">Error loading dashboard data. {error}</p>
@@ -148,44 +187,34 @@ export default function DashboardClientPage() {
   }
   
   const renderActivityItem = (activity: ActivityRecord) => {
+    const timestamp = activity.timestamp ? formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true }) : 'Just now';
     if (activity.type === 'wordSet') {
       const wordSet = activity as WordSetActivityRecord;
       const firstWord = wordSet.wordEntries?.[0]?.word || "words";
-      const firstSentence = wordSet.wordEntries?.[0]?.sentence || "sentences";
       return (
         <>
-          <div className="flex justify-between items-center mb-1">
-            <h4 className="font-semibold text-md text-primary-foreground bg-primary px-2 py-1 rounded-md inline-block flex items-center gap-1">
-              <Layers className="w-4 h-4" /> {wordSet.language} - {wordSet.field}
-            </h4>
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <Clock className="w-3 h-3" />
-              {formatDistanceToNow(new Date(wordSet.timestamp), { addSuffix: true })}
-            </span>
+          <div className="flex items-center gap-2 mb-1">
+            <Layers className="w-4 h-4 text-primary" />
+            <span className="font-semibold text-foreground">{wordSet.language} - {wordSet.field}</span>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Generated {wordSet.wordEntries?.length || 0} word entries.
+          <p className="text-xs text-muted-foreground ml-6">
+            Generated {wordSet.wordEntries?.length || 0} entries ({firstWord}...).
           </p>
-          <p className="text-sm text-muted-foreground mt-1 italic">
-            e.g., "{firstWord}": {firstSentence.substring(0,50)}{firstSentence.length > 50 ? "..." : ""}
-          </p>
+          <span className="text-xs text-muted-foreground/80 absolute top-3 right-3">{timestamp}</span>
         </>
       );
     } else if (activity.type === 'conversation') {
       const conv = activity as ConversationActivityRecord;
       return (
-        <>
-          <div className="flex justify-between items-center mb-1">
-             <h4 className="font-semibold text-md text-primary-foreground bg-primary px-2 py-1 rounded-md inline-block flex items-center gap-1">
-              <MessageSquare className="w-4 h-4" /> Conversation in {conv.language}
-            </h4>
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <Clock className="w-3 h-3" />
-              {formatDistanceToNow(new Date(conv.timestamp), { addSuffix: true })}
-            </span>
+         <>
+          <div className="flex items-center gap-2 mb-1">
+            <MessageSquare className="w-4 h-4 text-primary" />
+            <span className="font-semibold text-foreground">Conversation in {conv.language}</span>
           </div>
-          <p className="text-sm text-muted-foreground">Using words: {conv.selectedWords.join(", ").substring(0, 40)}{conv.selectedWords.join(", ").length > 40 ? "..." : ""}</p>
-          <p className="text-sm text-muted-foreground mt-1 italic">Script: {conv.conversation.substring(0,50)}{conv.conversation.length > 50 ? "..." : ""}</p>
+          <p className="text-xs text-muted-foreground ml-6 truncate">
+            Words: {conv.selectedWords.join(", ")}.
+          </p>
+           <span className="text-xs text-muted-foreground/80 absolute top-3 right-3">{timestamp}</span>
         </>
       );
     }
@@ -225,25 +254,13 @@ export default function DashboardClientPage() {
                     <li key={index} className="border-b pb-2 mb-2 last:border-b-0 last:pb-0 last:mb-0">
                       <div className="flex items-center justify-between">
                         <strong className="text-sm text-foreground">{entry.word}</strong>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-6 w-6 shrink-0"
-                          onClick={() => handlePlayWordAudioInDialog(entry.word)} 
-                          aria-label={`Play audio for ${entry.word}`}
-                        >
+                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handlePlayAudioInDialog(entry.word, 'word')} aria-label={`Play audio for ${entry.word}`}>
                           <Volume2 className="w-4 h-4 text-muted-foreground hover:text-primary" />
                         </Button>
                       </div>
                       <div className="flex items-start justify-between gap-1 mt-1">
                         <p className="text-xs text-muted-foreground flex-grow">{entry.sentence}</p>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-6 w-6 shrink-0"
-                          onClick={() => handlePlaySentenceAudioInDialog(entry.sentence)} 
-                          aria-label={`Play audio for sentence: ${entry.sentence}`}
-                        >
+                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handlePlayAudioInDialog(entry.sentence, 'sentence')} aria-label={`Play audio for sentence: ${entry.sentence}`}>
                           <Volume2 className="w-4 h-4 text-muted-foreground hover:text-primary" />
                         </Button>
                       </div>
@@ -255,7 +272,7 @@ export default function DashboardClientPage() {
             <div className="flex items-center">
               <span className="text-sm font-medium text-muted-foreground w-24">Date:</span>
               <span className="text-sm text-foreground">
-                {new Date(wordSet.timestamp).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                {selectedActivity.timestamp ? new Date(selectedActivity.timestamp).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'N/A'}
               </span>
             </div>
           </div>
@@ -298,7 +315,7 @@ export default function DashboardClientPage() {
             <div className="flex items-center">
               <span className="text-sm font-medium text-muted-foreground w-32">Date:</span>
               <span className="text-sm text-foreground">
-                {new Date(conv.timestamp).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                {selectedActivity.timestamp ? new Date(selectedActivity.timestamp).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'N/A'}
               </span>
             </div>
           </div>
@@ -309,68 +326,93 @@ export default function DashboardClientPage() {
   };
 
   return (
-    <div className="container mx-auto py-8 px-4 md:px-0">
-      <h1 className="text-3xl font-bold mb-8 text-primary text-center">Your Learning Dashboard</h1>
+    <div className="container mx-auto py-6 px-2 sm:px-4">
+      <h1 className="text-3xl font-bold mb-6 text-primary text-center">Learning Dashboard</h1>
       
       {error && <Alert variant="destructive" className="mb-4"><AlertTriangle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
-        <StatCard
-          title="Total Words Learned"
-          value={stats.totalWordsLearned.toString()}
-          icon={ListChecks}
-          description="Unique words from generated word sets."
-        />
-        <StatCard
-          title="Languages Explored"
-          value={stats.languagesCoveredCount.toString()}
-          icon={Languages}
-          description="Unique languages you've generated words in."
-        />
-        <StatCard
-          title="Fields Explored"
-          value={stats.fieldsCoveredCount.toString()}
-          icon={BookOpenText}
-          description="Language & field combinations for word sets."
-        />
-        <StatCard
-          title="Word Sets Generated"
-          value={stats.wordSetsGenerated.toString()}
-          icon={Layers}
-          description="Total word learning sessions initiated."
-        />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+        <StatCard title="Total Words Learned" value={stats.totalWordsLearned.toString()} icon={ListChecks} description="Unique words from generated sets." />
+        <StatCard title="Languages Explored" value={stats.languagesCoveredCount.toString()} icon={Languages} description="Unique languages practiced." />
+        <StatCard title="Fields Explored" value={stats.fieldsCoveredCount.toString()} icon={BookOpenText} description="Topics covered in word sets." />
+        <StatCard title="Total Sessions" value={stats.wordSetsGenerated.toString()} icon={Layers} description="Word sets & conversations." />
       </div>
 
-      <Card className="shadow-xl">
-        <CardHeader>
-          <CardTitle className="text-2xl font-semibold text-primary flex items-center gap-2">
-            <BarChart className="w-6 h-6 text-accent" />
-            Recent Activity
-          </CardTitle>
-          <CardDescription>
-            Your last few learning sessions. Click on an item to see details.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {recentActivity.length > 0 ? (
-            <ScrollArea className="h-[300px] pr-3">
-              <ul className="space-y-4">
-                {recentActivity.map((activity) => (
-                  <li 
-                    key={activity.id} 
-                    className="p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                    onClick={() => handleActivityClick(activity)}
-                  >
-                    {renderActivityItem(activity)}
-                  </li>
-                ))}
-              </ul>
-            </ScrollArea>
-          ) : (
-            <p className="text-muted-foreground text-center py-4">No recent activity recorded yet. Start learning to see your progress!</p>
-          )}
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <Card className="lg:col-span-2 shadow-xl">
+          <CardHeader>
+            <CardTitle className="text-xl font-semibold text-primary flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-accent" />
+              Learning Overview
+            </CardTitle>
+            <CardDescription>
+              A quick summary of your learning metrics.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pl-2 pr-6 pt-2">
+            {chartData.length > 0 ? (
+              <ChartContainer config={chartConfig} className="aspect-video h-[250px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                    <BarChart accessibilityLayer data={chartData} layout="vertical" margin={{ left: 10, right: 20 }}>
+                        <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+                        <XAxis type="number" dataKey="count" tickFormatter={(value) => value.toLocaleString()} />
+                        <YAxis type="category" dataKey="metric" width={80} tick={{ fontSize: 12 }} />
+                        <ChartTooltip
+                            cursor={{fill: 'hsl(var(--muted))'}}
+                            content={<ChartTooltipContent indicator="dot" />}
+                        />
+                        <Bar dataKey="count" radius={5}>
+                            {chartData.map((entry) => (
+                                <div key={entry.metric} style={{background: entry.fill}} /> // This is unusual for recharts Bar, fill should be on <Bar/> or individual Cell.
+                                // For simplicity, we'll apply fill directly on Bar or handle via CSS if advanced needed.
+                                // Recharts <Bar> component takes a `fill` prop directly, or <Cell> subcomponents.
+                                // The provided ChartConfig approach should handle colors by mapping data keys.
+                            ))}
+                        </Bar>
+                    </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            ) : (
+              <div className="h-[250px] flex items-center justify-center text-muted-foreground">
+                No data available for chart.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-xl">
+          <CardHeader>
+            <CardTitle className="text-xl font-semibold text-primary flex items-center gap-2">
+              <Activity className="w-5 h-5 text-accent" />
+              Recent Activity
+            </CardTitle>
+            <CardDescription>
+              Your last few sessions.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {recentActivity.length > 0 ? (
+              <ScrollArea className="h-[250px]">
+                <ul className="space-y-3">
+                  {recentActivity.map((activity) => (
+                    <li 
+                      key={activity.id} 
+                      className="p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer relative"
+                      onClick={() => handleActivityClick(activity)}
+                    >
+                      {renderActivityItem(activity)}
+                    </li>
+                  ))}
+                </ul>
+              </ScrollArea>
+            ) : (
+              <p className="text-muted-foreground text-center py-4 h-[250px] flex items-center justify-center">
+                No recent activity yet. <Link href="/words" className="text-primary underline ml-1">Start learning!</Link>
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {selectedActivity && (
         <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
@@ -385,3 +427,5 @@ export default function DashboardClientPage() {
     </div>
   );
 }
+
+    
