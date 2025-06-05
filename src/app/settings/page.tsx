@@ -96,9 +96,13 @@ export default function SettingsPage() {
     const result: SaveSettingsActionResult = await saveUserSettingsAction({ userId: currentUser.uid, settings: settingsToSave });
 
     if (result.success) {
+      let descriptionMessage = "Your preferences have been updated.";
+      if (Object.keys(settingsToSave).includes('appLanguage')) {
+        descriptionMessage += " Note: App display language change is currently conceptual and will not yet change the interface language.";
+      }
       toast({ 
         title: "Settings Saved", 
-        description: `Preferences have been updated.` 
+        description: descriptionMessage
       });
     } else if (result.error) {
       setError(result.error);
@@ -437,3 +441,4 @@ export default function SettingsPage() {
     </div>
   );
 }
+
