@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useContext } from 'react'; // Added useContext
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Wrench, TextQuote, Contrast, Unlock, ListPlus, LanguagesIcon, Save, Loader2, AlertTriangle, Globe, LibraryBig, Accessibility, InfoIcon } from "lucide-react";
 import Link from "next/link";
@@ -22,17 +22,21 @@ import type { NumberOfWordsSetting, AppLanguageSetting, UserSettings } from '@/l
 import { TARGET_LANGUAGES, TARGET_FIELDS, LANGUAGES as APP_LANGUAGES_OPTIONS } from '@/constants/data';
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
+import { LanguageContext } from '@/contexts/LanguageContext'; // Import LanguageContext
+import { useLocalization } from '@/hooks/useLocalization'; // Import useLocalization
 
 const FREE_APP_LANGUAGES: AppLanguageSetting[] = ["en", "ar"];
 
 export default function SettingsPage() {
   const { toast } = useToast();
+  const { t, language: currentContextLang, setLanguage: setContextLanguage, isInitialized: localeInitialized } = useLocalization(); // Use localization hook
+  const languageContext = useContext(LanguageContext);
+
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // State for pending changes
   const [pendingNumberOfWords, setPendingNumberOfWords] = useState<NumberOfWordsSetting>(5);
   const [pendingAppLanguage, setPendingAppLanguage] = useState<AppLanguageSetting>("en");
   const [pendingTargetLanguage, setPendingTargetLanguage] = useState<string>("en");
@@ -55,7 +59,7 @@ export default function SettingsPage() {
       // setPendingColorContrast(result.settings.colorContrast || "default");
     } else if (result.error) {
       setError(result.error);
-      toast({ variant: "destructive", title: "Error Loading Settings", description: result.error });
+      toast({ variant: "destructive", title: t('error'), description: result.error });
       setPendingNumberOfWords(5);
       setPendingAppLanguage("en");
       setPendingTargetLanguage("en");
@@ -63,7 +67,7 @@ export default function SettingsPage() {
       setPendingEnableAccessibilityAids(false);
     }
     setIsLoading(false);
-  }, [toast]);
+  }, [toast, t]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -72,11 +76,11 @@ export default function SettingsPage() {
         loadUserSettings(user);
       } else {
         setIsLoading(false); 
-        setError("You need to be logged in to manage settings.");
+        setError(t('loginRequiredDescription'));
       }
     });
     return () => unsubscribe();
-  }, [loadUserSettings]);
+  }, [loadUserSettings, t]);
 
 
   const handleSaveSettings = async () => {
@@ -98,19 +102,24 @@ export default function SettingsPage() {
     const result: SaveSettingsActionResult = await saveUserSettingsAction({ userId: currentUser.uid, settings: settingsToSave });
 
     if (result.success) {
-      let titleMessage = "Settings Saved";
-      let descriptionMessage = "Your preferences have been updated.";
+      let titleMessage = t('toastSettingsSavedTitle');
+      let descriptionMessage = t('toastSettingsSavedDescription');
 
-      if (Object.keys(settingsToSave).includes('appLanguage') && settingsToSave.appLanguage) {
+      if (settingsToSave.appLanguage) {
         const chosenLang = settingsToSave.appLanguage;
         const isFree = FREE_APP_LANGUAGES.includes(chosenLang);
         const langLabel = APP_LANGUAGES_OPTIONS.find(l => l.value.toLowerCase().startsWith(chosenLang.toLowerCase()))?.label || chosenLang;
+        
+        if (languageContext) {
+           languageContext.setLanguage(chosenLang); // Update context
+        }
 
         if (isFree) {
-          descriptionMessage += ` Note: App display language change to ${langLabel} is currently conceptual and will not yet change the interface language.`;
+          // For Arabic or English, the change might be immediate if i18n is fully set up
+          // For now, keep conceptual message
+          descriptionMessage = t('toastSettingsSavedDescriptionConceptual', { langLabel: langLabel });
         } else {
-          // Premium language chosen
-          descriptionMessage = `${langLabel} is a premium feature. Please upgrade to use it as your display language. Your preference has been saved, but the interface language will not change yet.`;
+          descriptionMessage = t('toastSettingsSavedDescriptionPremium', { langLabel: langLabel });
         }
       }
       
@@ -120,7 +129,7 @@ export default function SettingsPage() {
       });
     } else if (result.error) {
       setError(result.error);
-      toast({ variant: "destructive", title: "Error Saving Settings", description: result.error });
+      toast({ variant: "destructive", title: t('error'), description: result.error });
     }
     setIsSaving(false);
   };
@@ -140,31 +149,31 @@ export default function SettingsPage() {
           {lang.emoji && <span className="text-lg">{lang.emoji}</span>}
           {lang.label}
         </div>
-      ) : <SelectValue placeholder="Select target language..." />;
-  }, [pendingTargetLanguage]);
+      ) : <SelectValue placeholder={t('settingsSelectTargetLanguage')} />;
+  }, [pendingTargetLanguage, t]);
 
   const appLanguageDisplayNode = React.useMemo(() => {
-    const lang = APP_LANGUAGES_OPTIONS.find(l => l.value.toLowerCase().startsWith(pendingAppLanguage.toLowerCase()));
-    return lang ? (
+    // Ensure pendingAppLanguage is valid before finding.
+    const validLang = APP_LANGUAGES_OPTIONS.find(l => l.value.toLowerCase().startsWith(pendingAppLanguage?.toLowerCase() || 'en'));
+    return validLang ? (
         <div className="flex items-center gap-2">
-          {lang.emoji && <span className="text-lg">{lang.emoji}</span>}
-          {lang.label}
+          {validLang.emoji && <span className="text-lg">{validLang.emoji}</span>}
+          {validLang.label}
         </div>
-      ) : <SelectValue placeholder="Select app language..." />;
-  }, [pendingAppLanguage]);
+      ) : <SelectValue placeholder={t('settingsSelectAppLanguage')} />;
+  }, [pendingAppLanguage, t]);
 
-
-  if (isLoading) {
+  if (isLoading || !localeInitialized) {
     return (
       <div className="container mx-auto py-8 px-4">
         <Card className="w-full max-w-2xl mx-auto shadow-xl">
           <CardHeader className="items-center text-center">
             <Wrench className="w-12 h-12 text-primary mb-3" />
-            <CardTitle className="text-3xl font-bold text-primary">Settings</CardTitle>
+            <CardTitle className="text-3xl font-bold text-primary">{t('settingsTitle')}</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-            <p className="mt-4 text-muted-foreground">Loading your settings...</p>
+            <p className="mt-4 text-muted-foreground">{t('loading')}</p>
           </CardContent>
         </Card>
       </div>
@@ -177,12 +186,12 @@ export default function SettingsPage() {
         <Card className="w-full max-w-md mx-auto shadow-xl">
           <CardHeader className="items-center text-center">
             <Unlock className="w-12 h-12 text-primary mb-3" />
-            <CardTitle className="text-2xl font-bold text-primary">Access Denied</CardTitle>
+            <CardTitle className="text-2xl font-bold text-primary">{t('loginRequiredTitle')}</CardTitle>
           </CardHeader>
           <CardContent className="text-center space-y-4">
-            <p className="text-muted-foreground">Please log in to view and manage your settings.</p>
+            <p className="text-muted-foreground">{t('loginRequiredDescription')}</p>
             <Button asChild>
-              <Link href="/auth/login">Go to Login</Link>
+              <Link href="/auth/login">{t('goToLoginButton')}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -196,10 +205,10 @@ export default function SettingsPage() {
         <CardHeader className="items-center text-center">
           <Wrench className="w-12 h-12 text-primary mb-3" />
           <CardTitle className="text-3xl font-bold text-primary">
-            Settings
+            {t('settingsTitle')}
           </CardTitle>
           <CardDescription className="text-lg mt-1">
-            Customize your LinguaLeap experience. Click "Save Settings" to apply changes.
+             {t('settingsDescription')} {t('settingsApplyChanges')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
@@ -212,10 +221,10 @@ export default function SettingsPage() {
           
           <div className="space-y-4">
             <h3 className="text-xl font-semibold text-foreground flex items-center">
-              <ListPlus className="w-6 h-6 mr-2 text-accent" />
-              Word Generation
+              <ListPlus className="w-6 h-6 text-accent me-2" /> {/* Use me-2 for RTL */}
+              {t('settingsWordGenerationTitle')}
             </h3>
-            <Label htmlFor="num-words-group" className="text-base">Number of words per generation:</Label>
+            <Label htmlFor="num-words-group" className="text-base">{t('settingsNumWordsLabel')}</Label>
             <RadioGroup 
               id="num-words-group"
               value={pendingNumberOfWords.toString()} 
@@ -223,17 +232,17 @@ export default function SettingsPage() {
               className="space-y-2"
               disabled={isSaving}
             >
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 rtl:space-x-reverse">
                 <RadioGroupItem value="3" id="nw-3" />
-                <Label htmlFor="nw-3" className="font-normal">3 Words</Label>
+                <Label htmlFor="nw-3" className="font-normal">{t('settings3Words')}</Label>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 rtl:space-x-reverse">
                 <RadioGroupItem value="5" id="nw-5" />
-                <Label htmlFor="nw-5" className="font-normal">5 Words (Default)</Label>
+                <Label htmlFor="nw-5" className="font-normal">{t('settings5Words')} {t('settingsDefault')}</Label>
               </div>
             </RadioGroup>
             <p className="text-sm text-muted-foreground">
-              Choose how many words (each with a sentence) are generated at a time.
+              {t('settingsNumWordsDescription')}
             </p>
           </div>
 
@@ -241,13 +250,14 @@ export default function SettingsPage() {
 
           <div className="space-y-4">
             <h3 className="text-xl font-semibold text-foreground flex items-center">
-              <Globe className="w-6 h-6 mr-2 text-accent" />
-              Target Language
+              <Globe className="w-6 h-6 text-accent me-2" />
+              {t('settingsTargetLanguageTitle')}
             </h3>
             <Select 
               value={pendingTargetLanguage} 
               onValueChange={(value) => setPendingTargetLanguage(value)}
               disabled={isSaving}
+              dir={currentContextLang === 'ar' ? 'rtl' : 'ltr'}
             >
               <SelectTrigger className="w-full sm:w-[320px]">
                 {targetLanguageDisplayNode}
@@ -264,7 +274,7 @@ export default function SettingsPage() {
               </SelectContent>
             </Select>
             <p className="text-sm text-muted-foreground">
-              Select your primary language for learning new words and phrases.
+              {t('settingsTargetLanguageDescription')}
             </p>
           </div>
 
@@ -272,16 +282,17 @@ export default function SettingsPage() {
 
           <div className="space-y-4">
             <h3 className="text-xl font-semibold text-foreground flex items-center">
-              <LibraryBig className="w-6 h-6 mr-2 text-accent" />
-              Target Field of Knowledge
+              <LibraryBig className="w-6 h-6 text-accent me-2" />
+              {t('settingsTargetFieldTitle')}
             </h3>
             <Select 
               value={pendingTargetField} 
               onValueChange={(value) => setPendingTargetField(value)}
               disabled={isSaving}
+              dir={currentContextLang === 'ar' ? 'rtl' : 'ltr'}
             >
               <SelectTrigger className="w-full sm:w-[320px]">
-                <SelectValue placeholder="Select target field..." />
+                <SelectValue placeholder={t('settingsSelectTargetField')} />
               </SelectTrigger>
               <SelectContent>
                 {TARGET_FIELDS.map(field => (
@@ -292,7 +303,7 @@ export default function SettingsPage() {
               </SelectContent>
             </Select>
             <p className="text-sm text-muted-foreground">
-              Choose a specific area or topic you want to focus your vocabulary on.
+              {t('settingsTargetFieldDescription')}
             </p>
           </div>
 
@@ -300,10 +311,10 @@ export default function SettingsPage() {
           
           <div className="space-y-4">
             <h3 className="text-xl font-semibold text-foreground flex items-center">
-              <Accessibility className="w-6 h-6 mr-2 text-accent" />
-              Accessibility
+              <Accessibility className="w-6 h-6 text-accent me-2" />
+              {t('settingsAccessibilityTitle')}
             </h3>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 rtl:space-x-reverse">
               <Checkbox 
                 id="enable-accessibility-aids" 
                 checked={pendingEnableAccessibilityAids}
@@ -311,12 +322,12 @@ export default function SettingsPage() {
                 disabled={isSaving}
               />
               <Label htmlFor="enable-accessibility-aids" className="text-base font-normal">
-                Enable Visual & Text-Based Learning Aids
+                {t('settingsEnableAccessibilityAidsLabel')}
               </Label>
             </div>
              <p className="text-sm text-muted-foreground flex items-start gap-1.5">
               <InfoIcon className="w-4 h-4 mt-0.5 shrink-0 text-muted-foreground" />
-              <span>When enabled, the app may provide more visual cues, detailed text descriptions, or alternative ways to interact with content, beneficial for users with hearing impairments or those who prefer text/visual learning. (This is a conceptual control).</span>
+              <span>{t('settingsEnableAccessibilityAidsDescription')}</span>
             </p>
           </div>
 
@@ -324,13 +335,14 @@ export default function SettingsPage() {
 
           <div className="space-y-4">
             <h3 className="text-xl font-semibold text-foreground flex items-center">
-              <LanguagesIcon className="w-6 h-6 mr-2 text-accent" />
-              App Display Language
+              <LanguagesIcon className="w-6 h-6 text-accent me-2" />
+              {t('settingsAppLanguageTitle')}
             </h3>
             <Select 
               value={pendingAppLanguage} 
               onValueChange={(value) => setPendingAppLanguage(value as AppLanguageSetting)}
               disabled={isSaving}
+              dir={currentContextLang === 'ar' ? 'rtl' : 'ltr'}
             >
               <SelectTrigger className="w-full sm:w-[280px]">
                  {appLanguageDisplayNode}
@@ -343,7 +355,7 @@ export default function SettingsPage() {
               </SelectContent>
             </Select>
             <p className="text-sm text-muted-foreground">
-              Choose your preferred display language for the LinguaLeap interface. English and Arabic are free. Other languages are premium features.
+              {t('settingsAppLanguageDescription')}
             </p>
           </div>
           
@@ -351,14 +363,14 @@ export default function SettingsPage() {
           
           <div className="space-y-4">
             <h3 className="text-xl font-semibold text-foreground flex items-center">
-              <Unlock className="w-6 h-6 mr-2 text-accent" />
-              Account Security
+              <Unlock className="w-6 h-6 text-accent me-2" />
+              {t('settingsAccountSecurityTitle')}
             </h3>
             <Button onClick={handleChangePassword} variant="outline" disabled={isSaving}>
-              Change Password
+              {t('settingsChangePasswordButton')}
             </Button>
             <p className="text-sm text-muted-foreground">
-              Secure your account by updating your password. (This is a conceptual control for now.)
+              {t('settingsChangePasswordDescription')} {t('settingsConceptualControl')}
             </p>
           </div>
 
@@ -366,7 +378,7 @@ export default function SettingsPage() {
 
           <div className="space-y-4">
             <h3 className="text-xl font-semibold text-foreground flex items-center">
-              <TextQuote className="w-6 h-6 mr-2 text-accent" />
+              <TextQuote className="w-6 h-6 text-accent me-2" />
               Text Size (Conceptual)
             </h3>
             <RadioGroup 
@@ -375,21 +387,21 @@ export default function SettingsPage() {
               className="space-y-2"
               disabled={isSaving}
             >
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 rtl:space-x-reverse">
                 <RadioGroupItem value="small" id="ts-small" />
                 <Label htmlFor="ts-small" className="text-base font-normal">Small</Label>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 rtl:space-x-reverse">
                 <RadioGroupItem value="medium" id="ts-medium" />
                 <Label htmlFor="ts-medium" className="text-base font-normal">Medium (Default)</Label>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 rtl:space-x-reverse">
                 <RadioGroupItem value="large" id="ts-large" />
                 <Label htmlFor="ts-large" className="text-base font-normal">Large</Label>
               </div>
             </RadioGroup>
             <p className="text-sm text-muted-foreground">
-              Adjust the text size across the application. (This is a conceptual control for now)
+              Adjust the text size across the application. {t('settingsConceptualControl')}
             </p>
           </div>
 
@@ -397,7 +409,7 @@ export default function SettingsPage() {
 
           <div className="space-y-4">
             <h3 className="text-xl font-semibold text-foreground flex items-center">
-              <Contrast className="w-6 h-6 mr-2 text-accent" />
+              <Contrast className="w-6 h-6 text-accent me-2" />
               Color Contrast (Conceptual)
             </h3>
             <RadioGroup 
@@ -406,21 +418,21 @@ export default function SettingsPage() {
               className="space-y-2"
               disabled={isSaving}
             >
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 rtl:space-x-reverse">
                 <RadioGroupItem value="default" id="cc-default" />
                 <Label htmlFor="cc-default" className="text-base font-normal">Default</Label>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 rtl:space-x-reverse">
                 <RadioGroupItem value="high-light" id="cc-high-light" />
                 <Label htmlFor="cc-high-light" className="text-base font-normal">High Contrast (Light)</Label>
               </div>
-               <div className="flex items-center space-x-2">
+               <div className="flex items-center space-x-2 rtl:space-x-reverse">
                 <RadioGroupItem value="high-dark" id="cc-high-dark" />
                 <Label htmlFor="cc-high-dark" className="text-base font-normal">High Contrast (Dark)</Label>
               </div>
             </RadioGroup>
             <p className="text-sm text-muted-foreground">
-              Change the color scheme for better readability. (This is a conceptual control for now)
+              Change the color scheme for better readability. {t('settingsConceptualControl')}
             </p>
           </div>
           
@@ -435,19 +447,19 @@ export default function SettingsPage() {
             >
               {isSaving ? (
                 <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Saving...
+                  <Loader2 className="w-5 h-5 animate-spin me-2" /> {t('settingsSavingButton')}
                 </>
               ) : (
                 <>
-                  <Save className="w-5 h-5 mr-2" /> Save Settings
+                  <Save className="w-5 h-5 me-2" /> {t('settingsSaveButton')}
                 </>
               )}
             </Button>
             <p className="text-muted-foreground text-sm">
-              More settings for exercise timers and notifications will be available here soon.
+              {t('settingsMoreSettingsSoon')}
             </p>
             <Button asChild variant="outline" disabled={isSaving}>
-              <Link href="/">Return to Home</Link>
+              <Link href="/">{t('settingsReturnToHomeButton')}</Link>
             </Button>
           </div>
         </CardContent>
@@ -455,3 +467,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+    

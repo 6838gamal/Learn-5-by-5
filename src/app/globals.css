@@ -100,4 +100,9 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+  html[dir="rtl"] {
+    /* Add any global RTL specific styles here if needed, e.g., for fonts */
+  }
 }
+
+    
