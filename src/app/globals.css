@@ -8,78 +8,88 @@ body {
 
 @layer base {
   :root {
-    --background: 228 50% 97%; /* #F0F2F9 Very light lavender */
-    --foreground: 230 20% 25%; /* #363B59 Dark Slate Blue for contrast */
-    --card: 228 50% 97%;
-    --card-foreground: 230 20% 25%;
-    --popover: 228 50% 97%;
-    --popover-foreground: 230 20% 25%;
-    --primary: 230 53% 48%; /* #3F51B5 Deep indigo */
+    --background: 222 60% 12%; /* Deep Navy Blue */
+    --foreground: 220 15% 95%; /* Off-white/Light Grayish Blue */
+
+    --card: 222 55% 17%; /* Slightly Lighter Navy Blue for cards */
+    --card-foreground: 220 15% 95%;
+
+    --popover: 222 55% 15%; /* Darker Popover */
+    --popover-foreground: 220 15% 95%;
+
+    --primary: 210 80% 58%; /* Vibrant Blue for active elements/buttons */
     --primary-foreground: 0 0% 100%; /* White */
-    --secondary: 230 50% 90%; /* Lighter indigo/lavender */
-    --secondary-foreground: 230 53% 48%; /* Deep indigo */
-    --muted: 230 50% 90%;
-    --muted-foreground: 230 25% 55%; /* Muted slate blue */
-    --accent: 45 100% 51%; /* #FFC107 Golden yellow */
-    --accent-foreground: 45 100% 10%; /* Dark brown for contrast on yellow */
-    --destructive: 0 84.2% 60.2%;
+
+    --secondary: 222 40% 28%; /* Muted Darker Blue */
+    --secondary-foreground: 210 80% 58%; /* Primary blue for text on secondary */
+
+    --muted: 222 40% 22%; /* Subtle Muted Blue for borders etc. */
+    --muted-foreground: 220 15% 70%; /* Light Grayish Blue for muted text */
+
+    --accent: 340 80% 60%; /* Pink/Red for special CTAs */
+    --accent-foreground: 0 0% 100%; /* White */
+
+    --destructive: 0 70% 55%; /* Standard Destructive Red */
     --destructive-foreground: 0 0% 98%;
-    --border: 230 30% 88%; /* Slightly darker lavender for borders */
-    --input: 230 30% 88%;
-    --ring: 230 53% 48%; /* Primary color for rings */
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
+
+    --border: 222 40% 30%; /* Visible border against dark backgrounds */
+    --input: 222 40% 25%; /* Input background */
+    --ring: 210 80% 60%; /* Ring color matching primary */
+
+    --chart-1: 140 70% 50%; /* Green */
+    --chart-2: 45 90% 55%;  /* Orange/Yellow */
+    --chart-3: 330 80% 60%; /* Pink */
+    --chart-4: 190 80% 50%; /* Cyan */
+    --chart-5: 260 70% 65%; /* Purple */
+    --radius: 0.75rem; /* Slightly more rounded corners like image */
 
     /* Sidebar specific colors */
-    --sidebar-background: 230 50% 95%; /* #E8EAF6 Slightly darker lavender */
-    --sidebar-foreground: 230 20% 25%; /* Dark Slate Blue */
-    --sidebar-primary: 230 53% 48%; /* Deep indigo */
+    --sidebar-background: 222 60% 12%; /* Same as main background */
+    --sidebar-foreground: 220 15% 95%; /* Same as main foreground */
+    --sidebar-primary: 210 80% 58%; /* Vibrant Blue for active/hover */
     --sidebar-primary-foreground: 0 0% 100%; /* White */
-    --sidebar-accent: 45 100% 51%; /* Golden yellow */
-    --sidebar-accent-foreground: 45 100% 10%; /* Dark brown */
-    --sidebar-border: 230 30% 85%; /* Border for sidebar elements */
-    --sidebar-ring: 45 100% 51%; /* Accent color for ring on sidebar focus */
+    --sidebar-accent: 340 80% 60%; /* Pink/Red accent for sidebar if needed */
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 222 40% 25%; /* Subtle border for sidebar elements */
+    --sidebar-ring: 210 80% 60%; /* Accent color for ring on sidebar focus */
   }
 
   .dark {
-    /* Dark theme is not explicitly requested, but keeping structure */
-    --background: 230 20% 10%; /* Dark blue/grey */
-    --foreground: 230 30% 90%; /* Light lavender/grey */
-    --card: 230 20% 10%;
-    --card-foreground: 230 30% 90%;
-    --popover: 230 20% 10%;
-    --popover-foreground: 230 30% 90%;
-    --primary: 230 53% 60%; /* Brighter indigo for dark mode */
+    /* This block can be used for a future, alternative dark theme or removed if not needed.
+       For now, it will mirror the new :root dark theme. */
+    --background: 222 60% 12%;
+    --foreground: 220 15% 95%;
+    --card: 222 55% 17%;
+    --card-foreground: 220 15% 95%;
+    --popover: 222 55% 15%;
+    --popover-foreground: 220 15% 95%;
+    --primary: 210 80% 58%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 230 20% 20%;
-    --secondary-foreground: 230 30% 90%;
-    --muted: 230 20% 20%;
-    --muted-foreground: 230 25% 70%;
-    --accent: 45 100% 60%; /* Brighter yellow */
-    --accent-foreground: 45 100% 10%;
-    --destructive: 0 70% 50%;
+    --secondary: 222 40% 28%;
+    --secondary-foreground: 210 80% 58%;
+    --muted: 222 40% 22%;
+    --muted-foreground: 220 15% 70%;
+    --accent: 340 80% 60%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 70% 55%;
     --destructive-foreground: 0 0% 98%;
-    --border: 230 20% 30%;
-    --input: 230 20% 30%;
-    --ring: 230 53% 60%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --border: 222 40% 30%;
+    --input: 222 40% 25%;
+    --ring: 210 80% 60%;
+    --chart-1: 140 70% 50%;
+    --chart-2: 45 90% 55%;
+    --chart-3: 330 80% 60%;
+    --chart-4: 190 80% 50%;
+    --chart-5: 260 70% 65%;
 
-    --sidebar-background: 230 20% 12%; /* Darker sidebar */
-    --sidebar-foreground: 230 30% 90%;
-    --sidebar-primary: 230 53% 60%;
+    --sidebar-background: 222 60% 12%;
+    --sidebar-foreground: 220 15% 95%;
+    --sidebar-primary: 210 80% 58%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 45 100% 60%;
-    --sidebar-accent-foreground: 45 100% 10%;
-    --sidebar-border: 230 20% 25%;
-    --sidebar-ring: 45 100% 60%;
+    --sidebar-accent: 340 80% 60%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 222 40% 25%;
+    --sidebar-ring: 210 80% 60%;
   }
 }
 
