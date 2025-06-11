@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Mic, Volume2, Info, BookOpenText, FileText, Languages, Loader2, AlertTriangle, Unlock } from "lucide-react";
+import { Mic, Volume2, Info, BookOpenText, FileText, Languages, Loader2, AlertTriangle, Unlock, Settings as SettingsIcon, LibraryBig } from "lucide-react";
 import Link from "next/link";
 import { 
   getActivityData as getActivityDataLocal, 
@@ -12,13 +12,14 @@ import {
   type WordEntry 
 } from "@/lib/activityStore";
 import { fetchUserActivitiesAction, type FetchUserActivitiesResult } from "@/app/actions"; // Firestore action
+import { getTargetLanguageSettingAction, getTargetFieldSettingAction } from '@/app/settingsActions';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { LANGUAGES as APP_LANGUAGES_OPTIONS, type SelectionOption, TARGET_LANGUAGES } from "@/constants/data"; // Use TARGET_LANGUAGES for consistency
+import { TARGET_LANGUAGES, TARGET_FIELDS } from "@/constants/data"; 
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
 
 interface DisplayableWordSoundEntry {
   word: string;
@@ -29,27 +30,63 @@ export default function SoundsPage() {
   const [displayableEntries, setDisplayableEntries] = useState<DisplayableWordSoundEntry[]>([]);
   const [isClient, setIsClient] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [selectedLanguage, setSelectedLanguage] = useState<string>("");
-  const [isLoadingData, setIsLoadingData] = useState(true); // Changed: true by default
+  
+  const [settingsTargetLanguage, setSettingsTargetLanguage] = useState<string | undefined>();
+  const [settingsTargetField, setSettingsTargetField] = useState<string | undefined>();
+  const [isSettingsLoading, setIsSettingsLoading] = useState(true);
+  const [isLoadingData, setIsLoadingData] = useState(false); // For data fetching after settings are loaded
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  // Load user settings
+  useEffect(() => {
+    setIsClient(true);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setCurrentUser(user);
+      setIsSettingsLoading(true);
+      if (user) {
+        try {
+          const [targetLang, targetFld] = await Promise.all([
+            getTargetLanguageSettingAction(user.uid),
+            getTargetFieldSettingAction(user.uid)
+          ]);
+          setSettingsTargetLanguage(targetLang);
+          setSettingsTargetField(targetFld);
+        } catch (e) {
+          console.error("Failed to load user settings for Sounds page:", e);
+          toast({ variant: "destructive", title: "Could not load settings", description: "Please try again or set your preferences in Settings." });
+        }
+      } else {
+        // Clear settings for non-logged-in users or if login is required by config
+        setSettingsTargetLanguage(undefined);
+        setSettingsTargetField(undefined);
+      }
+      setIsSettingsLoading(false);
+    });
+    return () => unsubscribe();
+  }, [toast]);
 
 
-  const loadSoundEntries = useCallback(async (language: string, user: User | null) => {
-    if (!isClient || !language) {
+  const loadSoundEntries = useCallback(async () => {
+    if (!isClient || !settingsTargetLanguage || !settingsTargetField) {
       setDisplayableEntries([]);
       setIsLoadingData(false);
       return;
     }
+    
     setIsLoadingData(true);
     setError(null);
     let processedEntries: DisplayableWordSoundEntry[] = [];
 
-    if (user) { // Logged-in: Fetch from Firestore
-      const result: FetchUserActivitiesResult = await fetchUserActivitiesAction({ userId: user.uid });
+    if (currentUser) { // Logged-in: Fetch from Firestore
+      const result: FetchUserActivitiesResult = await fetchUserActivitiesAction({ userId: currentUser.uid });
       if (result.activities) {
         const wordSentenceMap = new Map<string, { sentence: string | null, timestamp: number }>();
         result.activities.forEach(record => {
-          if (record.type === 'wordSet' && record.language === language && (record as WordSetActivityRecord).wordEntries) {
+          if (record.type === 'wordSet' && 
+              record.language === settingsTargetLanguage && 
+              record.field === settingsTargetField && 
+              (record as WordSetActivityRecord).wordEntries) {
             (record as WordSetActivityRecord).wordEntries.forEach((entry: WordEntry) => {
               if (!wordSentenceMap.has(entry.word) || record.timestamp > (wordSentenceMap.get(entry.word)?.timestamp || 0)) {
                 wordSentenceMap.set(entry.word, { sentence: entry.sentence, timestamp: record.timestamp });
@@ -62,16 +99,19 @@ export default function SoundsPage() {
         })).sort((a, b) => a.word.localeCompare(b.word));
       } else if (result.error) {
         setError(`Failed to load sound entries: ${result.error}`);
+        toast({ variant: "destructive", title: "Error Loading Sounds", description: result.error});
       }
     } else if (auth.app.options.apiKey !== "YOUR_API_KEY_HERE") {
-        // Not logged in, Firebase configured - show empty or prompt to login. Entries will be empty.
         setDisplayableEntries([]);
     }
     else { // Not logged-in & test mode (placeholder API key): Use localStorage
       const activityData = getActivityDataLocal();
       const wordSentenceMap = new Map<string, { sentence: string | null, timestamp: number }>();
       activityData.learnedItems.forEach(record => {
-        if (record.type === 'wordSet' && record.language === language && (record as WordSetActivityRecord).wordEntries) {
+        if (record.type === 'wordSet' && 
+            record.language === settingsTargetLanguage && 
+            record.field === settingsTargetField && 
+            (record as WordSetActivityRecord).wordEntries) {
           (record as WordSetActivityRecord).wordEntries.forEach((entry: WordEntry) => {
             if (!wordSentenceMap.has(entry.word) || record.timestamp > (wordSentenceMap.get(entry.word)?.timestamp || 0)) {
               wordSentenceMap.set(entry.word, { sentence: entry.sentence, timestamp: record.timestamp });
@@ -85,33 +125,17 @@ export default function SoundsPage() {
     }
     setDisplayableEntries(processedEntries);
     setIsLoadingData(false);
-  }, [isClient]);
-
-  useEffect(() => {
-    setIsClient(true);
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
-      // Trigger loading logic once auth state is known, even if no language is selected yet
-      // to handle the "login required" screen properly.
-      // If a language is already selected, loadSoundEntries will proceed.
-      // If not, it will wait for language selection.
-      if (selectedLanguage || !user) { // If language selected OR user is null (to show login prompt)
-         loadSoundEntries(selectedLanguage, user);
-      } else {
-         setIsLoadingData(false); // No language and user is present, nothing to load yet.
-      }
-    });
-    return () => unsubscribe();
-  }, [selectedLanguage, loadSoundEntries]); // loadSoundEntries is stable
+  }, [isClient, settingsTargetLanguage, settingsTargetField, currentUser, toast]);
   
   useEffect(() => { 
-    if (isClient && selectedLanguage) {
-      loadSoundEntries(selectedLanguage, currentUser);
-    } else if (isClient && !selectedLanguage) {
+    if (isClient && !isSettingsLoading && settingsTargetLanguage && settingsTargetField) {
+      loadSoundEntries();
+    } else if (isClient && !isSettingsLoading && (!settingsTargetLanguage || !settingsTargetField)) {
+      // If settings are loaded but language/field is not set, clear entries and stop loading data
       setDisplayableEntries([]);
       setIsLoadingData(false); 
     }
-  }, [isClient, selectedLanguage, currentUser, loadSoundEntries]);
+  }, [isClient, isSettingsLoading, settingsTargetLanguage, settingsTargetField, currentUser, loadSoundEntries]);
 
 
   const handlePlayWordAudio = (word: string) => {
@@ -123,32 +147,18 @@ export default function SoundsPage() {
     alert(`Audio playback for the sentence "${sentence}" is not yet implemented.`);
   };
   
-  const languageDisplayNode = useMemo(() => {
-    if (isClient && selectedLanguage) {
-      const lang = TARGET_LANGUAGES.find(l => l.value === selectedLanguage);
-      return lang ? (
-        <div className="flex items-center gap-2">
-          {lang.emoji && <span className="text-lg">{lang.emoji}</span>}
-          {lang.label}
-        </div>
-      ) : <SelectValue placeholder="Choose a language..." />;
-    }
-    return <SelectValue placeholder="Choose a language..." />;
-  }, [isClient, selectedLanguage]);
+  const targetLanguageLabel = TARGET_LANGUAGES.find(l => l.value === settingsTargetLanguage)?.label || settingsTargetLanguage;
+  const targetFieldLabel = TARGET_FIELDS.find(f => f.value === settingsTargetField)?.label || settingsTargetField;
 
 
-  if (!isClient || isLoadingData) { // Show loader if client not ready OR if data is actively loading
+  if (!isClient || isSettingsLoading) {
     return (
       <div className="container mx-auto py-8 px-4">
         <Card className="w-full max-w-3xl mx-auto shadow-xl">
-          <CardHeader className="items-center">
+          <CardHeader className="items-center text-center">
             <Mic className="w-16 h-16 text-primary mb-4" />
-            <CardTitle className="text-3xl font-bold text-center text-primary">
-              Sounds Practice
-            </CardTitle>
-            <CardDescription className="text-center text-lg mt-2">
-              Loading interface...
-            </CardDescription>
+            <CardTitle className="text-3xl font-bold text-primary">Sounds Practice</CardTitle>
+            <CardDescription className="text-lg mt-2">Loading your preferences...</CardDescription>
           </CardHeader>
           <CardContent className="text-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
@@ -158,7 +168,7 @@ export default function SoundsPage() {
     );
   }
   
-  if (!currentUser && auth.app.options.apiKey !== "YOUR_API_KEY_HERE" && isClient && !isLoadingData) {
+  if (!currentUser && auth.app.options.apiKey !== "YOUR_API_KEY_HERE" && isClient && !isSettingsLoading) {
      return (
       <div className="container mx-auto py-8 px-4">
         <Card className="w-full max-w-md mx-auto shadow-xl">
@@ -176,6 +186,29 @@ export default function SoundsPage() {
       </div>
     );
   }
+  
+  if (!isSettingsLoading && (!settingsTargetLanguage || !settingsTargetField)) {
+    return (
+      <div className="container mx-auto py-8 px-4">
+        <Card className="w-full max-w-lg mx-auto shadow-xl">
+          <CardHeader className="items-center text-center">
+            <SettingsIcon className="w-10 h-10 text-primary mb-3" />
+            <CardTitle className="text-2xl font-bold text-primary">Set Your Preferences</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <p className="text-muted-foreground">
+              Please set your preferred target language and field of knowledge in the 
+              <Link href="/settings" className="text-primary underline hover:text-accent"> Settings page</Link> 
+              to practice sounds.
+            </p>
+            <Button asChild>
+              <Link href="/settings">Go to Settings</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
 
   return (
@@ -184,61 +217,28 @@ export default function SoundsPage() {
         <CardHeader className="items-center text-center">
           <Mic className="w-16 h-16 text-primary mb-4" />
           <CardTitle className="text-3xl font-bold text-primary">
-            {selectedLanguage 
-              ? `Sounds in ${TARGET_LANGUAGES.find(l => l.value === selectedLanguage)?.label || selectedLanguage}` 
-              : "Sounds Practice"}
+            Sounds in {targetLanguageLabel}
           </CardTitle>
           <CardDescription className="text-lg mt-2">
-            {selectedLanguage 
-              ? `Practice listening to words and sentences you've learned in ${TARGET_LANGUAGES.find(l => l.value === selectedLanguage)?.label || selectedLanguage}.`
-              : "Select a language to see your learned words and sentences. Click the speaker icon to hear them (feature coming soon)."}
+            Practice sounds for <strong className="text-primary">{targetFieldLabel}</strong>.
+            Click speaker icons to hear words/sentences (feature coming soon).
+             <br />
+            {currentUser && (
+                <Link href="/settings" className="text-sm underline text-primary hover:text-accent">Change language/field in settings</Link>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-6">
-            <Label htmlFor="language-select-sounds" className="text-base flex items-center gap-2 mb-2">
-              <Languages className="w-5 h-5 text-primary" /> Select Language:
-            </Label>
-            <Select value={selectedLanguage} onValueChange={setSelectedLanguage} disabled={isLoadingData}>
-              <SelectTrigger id="language-select-sounds">
-                {languageDisplayNode}
-              </SelectTrigger>
-              <SelectContent>
-                {TARGET_LANGUAGES.map(lang => (
-                  <SelectItem key={lang.value} value={lang.value}>
-                    <div className="flex items-center gap-3 py-1">
-                      <span className="text-xl">{lang.emoji}</span>
-                      <div>
-                        <span className="font-medium">{lang.label}</span>
-                        {/* Description removed for TARGET_LANGUAGES as it's not in the constant structure */}
-                      </div>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
           {error && <Alert variant="destructive" className="mb-4"><AlertTriangle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
-
-          {!selectedLanguage && !isLoadingData && (
-            <Alert variant="default" className="bg-secondary/30">
-                <Info className="h-5 w-5 text-primary" />
-                <AlertTitle>Select a Language</AlertTitle>
-                <AlertDescription>
-                    Please choose a language from the dropdown above to view your learned words and sentences.
-                </AlertDescription>
-            </Alert>
-          )}
           
-          {/* Loader inside content area, only if language is selected and still loading */}
-          {isLoadingData && selectedLanguage && (
+          {isLoadingData && (
             <div className="h-[400px] flex items-center justify-center">
                 <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                <p className="ml-3 text-muted-foreground">Loading sounds...</p>
             </div>
           )}
 
-          {!isLoadingData && selectedLanguage && displayableEntries.length > 0 && (
+          {!isLoadingData && displayableEntries.length > 0 && (
             <>
               <Alert className="mb-6 bg-secondary/30">
                 <Info className="h-5 w-5 text-primary" />
@@ -293,12 +293,12 @@ export default function SoundsPage() {
             </>
           )}
           
-          {!isLoadingData && selectedLanguage && displayableEntries.length === 0 && !error && (
+          {!isLoadingData && displayableEntries.length === 0 && !error && (
              <Alert variant="default" className="bg-secondary/30">
                 <AlertTriangle className="h-4 w-4 text-primary" />
-                <AlertTitle>No Words Yet for {TARGET_LANGUAGES.find(l => l.value === selectedLanguage)?.label || selectedLanguage}</AlertTitle>
+                <AlertTitle>No Words Yet for {targetLanguageLabel} - {targetFieldLabel}</AlertTitle>
                 <AlertDescription>
-                You haven't generated any words in {TARGET_LANGUAGES.find(l=>l.value === selectedLanguage)?.label || selectedLanguage} yet. 
+                You haven't generated any words for this language and field combination yet. 
                 Go to the <Link href="/words" className="underline hover:text-primary font-medium">Words section</Link> to add some!
                 </AlertDescription>
             </Alert>
@@ -314,3 +314,4 @@ export default function SoundsPage() {
     </div>
   );
 }
+
