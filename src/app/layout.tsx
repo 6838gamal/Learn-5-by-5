@@ -27,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en"> {/* Default lang, will be updated by LanguageProvider */}
+    <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <LanguageProvider> {/* Wrap with LanguageProvider */}
           <ConditionalAppShell>
@@ -39,5 +39,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-    
