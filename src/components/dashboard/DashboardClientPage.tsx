@@ -17,7 +17,7 @@ import {
   type FetchUserActivitiesResult,
   type FetchUserLearningStatsResult
 } from "@/app/actions";
-import { BarChart as BarChartIcon, BookOpenText, Layers, ListChecks, Clock, Volume2, FileText, MessageSquare, Loader2, Unlock, Languages, TrendingUp, Activity } from "lucide-react"; // Added TrendingUp, Activity
+import { BarChart as BarChartIcon, BookOpenText, Layers, ListChecks, Clock, Volume2, FileText, MessageSquare, Loader2, Unlock, Languages, TrendingUp, Activity } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow } from 'date-fns';
 import StatCard from "./StatCard";
@@ -44,6 +44,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts";
+import { useRouter } from "next/navigation"; // Added router
 
 const initialStats: LearningStats = { 
   totalWordsLearned: 0, 
@@ -57,51 +58,70 @@ export default function DashboardClientPage() {
   const [stats, setStats] = useState<LearningStats | null>(initialStats);
   const [recentActivity, setRecentActivity] = useState<ActivityRecord[]>([]);
   const [isClient, setIsClient] = useState(false);
-  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [isLoadingPage, setIsLoadingPage] = useState(true); // Unified loading state
   const [selectedActivity, setSelectedActivity] = useState<ActivityRecord | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter(); // Initialize router
 
   const loadDashboardData = useCallback(async (user: User | null) => {
-    setIsLoadingData(true);
+    // setIsLoadingPage(true); // isLoadingPage is true by default or when auth state changes
     setError(null);
+    let loadedStats: LearningStats | null = initialStats;
+    let loadedActivity: ActivityRecord[] = [];
+
     if (user) {
       const [statsResult, activityResult] = await Promise.all([
         fetchUserLearningStatsAction({ userId: user.uid }),
-        fetchUserActivitiesAction({ userId: user.uid, count: 5 }) // Fetch 5 for recent activity
+        fetchUserActivitiesAction({ userId: user.uid, count: 5 })
       ]);
 
       if (statsResult.stats) {
-        setStats(statsResult.stats);
+        loadedStats = statsResult.stats;
       } else {
         setError(statsResult.error || "Could not load learning statistics.");
-        setStats(getStatsLocal()); 
       }
 
       if (activityResult.activities) {
-        setRecentActivity(activityResult.activities);
+        loadedActivity = activityResult.activities;
       } else {
         setError(prevError => `${prevError || ""} ${activityResult.error || "Could not load recent activity."}`.trim());
-        setRecentActivity(getActivityDataLocal().learnedItems.slice(0, 5));
       }
-    } else if (auth.app.options.apiKey !== "YOUR_API_KEY_HERE" && auth.app.options.appId !== "YOUR_APP_ID_HERE") {
-         setStats(initialStats);
-         setRecentActivity([]);
-    } else { 
-      setStats(getStatsLocal());
-      setRecentActivity(getActivityDataLocal().learnedItems.slice(0, 5));
+    } else if (auth.app.options.apiKey === "YOUR_API_KEY_HERE" || auth.app.options.appId === "YOUR_APP_ID_HERE") {
+      // Test mode / Local data mode (Firebase not fully configured)
+      loadedStats = getStatsLocal();
+      loadedActivity = getActivityDataLocal().learnedItems.slice(0, 5);
     }
-    setIsLoadingData(false);
+    // If not user and Firebase is configured, redirection is handled in onAuthStateChanged
+    
+    setStats(loadedStats);
+    setRecentActivity(loadedActivity);
+    setIsLoadingPage(false); 
   }, []);
 
   useEffect(() => {
     setIsClient(true);
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
-      loadDashboardData(user);
+      if (user) {
+        loadDashboardData(user);
+      } else {
+        // Check if Firebase is properly configured (not using placeholder keys)
+        const isFirebaseConfigured = !(auth.app.options.apiKey === "YOUR_API_KEY_HERE" || auth.app.options.appId === "YOUR_APP_ID_HERE");
+        
+        if (isFirebaseConfigured) {
+          router.push('/auth/login');
+          // setIsLoadingPage can remain true, as the page will redirect.
+          // Or set to false if you want to stop skeleton, but redirect should be fast.
+        } else {
+          // Firebase not configured (test mode), load local data.
+          loadDashboardData(null);
+        }
+      }
     });
     return () => unsubscribe();
-  }, [loadDashboardData]);
+  }, [loadDashboardData, router]);
+
 
   const handleActivityClick = (activity: ActivityRecord) => {
     setSelectedActivity(activity);
@@ -112,12 +132,13 @@ export default function DashboardClientPage() {
     alert(`Audio playback for ${type} "${text}" is not yet implemented.`);
   };
 
-  const chartData = stats ? [
-    { metric: "Words", count: stats.totalWordsLearned, fill: "var(--color-words)" },
-    { metric: "Languages", count: stats.languagesCoveredCount, fill: "var(--color-languages)" },
-    { metric: "Fields", count: stats.fieldsCoveredCount, fill: "var(--color-fields)" },
-    { metric: "Sets", count: stats.wordSetsGenerated, fill: "var(--color-sets)" },
-  ] : [];
+  const currentStats = stats || initialStats;
+  const chartData = [
+    { metric: "Words", count: currentStats.totalWordsLearned, fill: "var(--color-words)" },
+    { metric: "Languages", count: currentStats.languagesCoveredCount, fill: "var(--color-languages)" },
+    { metric: "Fields", count: currentStats.fieldsCoveredCount, fill: "var(--color-fields)" },
+    { metric: "Sets", count: currentStats.wordSetsGenerated, fill: "var(--color-sets)" },
+  ];
 
   const chartConfig = {
     count: {
@@ -142,7 +163,7 @@ export default function DashboardClientPage() {
   } satisfies ChartConfig;
 
 
-  if (!isClient || isLoadingData) {
+  if (!isClient || isLoadingPage) {
     return (
       <div className="container mx-auto py-8 px-4">
         <h1 className="text-3xl font-bold mb-8 text-primary text-center">Your Learning Dashboard</h1>
@@ -155,33 +176,6 @@ export default function DashboardClientPage() {
             <Card className="shadow-xl animate-pulse"><CardHeader><div className="h-8 bg-muted rounded w-1/3"></div></CardHeader><CardContent><div className="h-64 bg-muted rounded flex items-center justify-center"><Loader2 className="h-10 w-10 text-primary animate-spin"/></div></CardContent></Card>
             <Card className="shadow-xl animate-pulse"><CardHeader><div className="h-8 bg-muted rounded w-1/3"></div></CardHeader><CardContent><div className="h-64 bg-muted rounded flex items-center justify-center"><Loader2 className="h-10 w-10 text-primary animate-spin"/></div></CardContent></Card>
         </div>
-      </div>
-    );
-  }
-
-  if (!currentUser && auth.app.options.apiKey !== "YOUR_API_KEY_HERE" && auth.app.options.appId !== "YOUR_APP_ID_HERE") {
-     return (
-      <div className="container mx-auto py-8 px-4">
-        <Card className="w-full max-w-md mx-auto shadow-xl">
-          <CardHeader className="items-center text-center">
-            <Unlock className="w-12 h-12 text-primary mb-3" />
-            <CardTitle className="text-2xl font-bold text-primary">Welcome to LinguaLeap!</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <p className="text-muted-foreground">Please log in to see your personalized dashboard and save your progress.</p>
-            <Button asChild>
-              <Link href="/auth/login">Go to Login</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (!stats) { 
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-muted-foreground text-lg">Error loading dashboard data. {error}</p>
       </div>
     );
   }
@@ -332,10 +326,10 @@ export default function DashboardClientPage() {
       {error && <Alert variant="destructive" className="mb-4"><AlertTriangle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-        <StatCard title="Total Words Learned" value={stats.totalWordsLearned.toString()} icon={ListChecks} description="Unique words from generated sets." />
-        <StatCard title="Languages Explored" value={stats.languagesCoveredCount.toString()} icon={Languages} description="Unique languages practiced." />
-        <StatCard title="Fields Explored" value={stats.fieldsCoveredCount.toString()} icon={BookOpenText} description="Topics covered in word sets." />
-        <StatCard title="Total Sessions" value={stats.wordSetsGenerated.toString()} icon={Layers} description="Word sets & conversations." />
+        <StatCard title="Total Words Learned" value={currentStats.totalWordsLearned.toString()} icon={ListChecks} description="Unique words from generated sets." />
+        <StatCard title="Languages Explored" value={currentStats.languagesCoveredCount.toString()} icon={Languages} description="Unique languages practiced." />
+        <StatCard title="Fields Explored" value={currentStats.fieldsCoveredCount.toString()} icon={BookOpenText} description="Topics covered in word sets." />
+        <StatCard title="Total Sessions" value={currentStats.wordSetsGenerated.toString()} icon={Layers} description="Word sets & conversations." />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
@@ -361,13 +355,13 @@ export default function DashboardClientPage() {
                             cursor={{fill: 'hsl(var(--muted))'}}
                             content={<ChartTooltipContent indicator="dot" />}
                         />
-                        <Bar dataKey="count" radius={5}>
-                            {chartData.map((entry) => (
-                                <div key={entry.metric} style={{background: entry.fill}} /> // This is unusual for recharts Bar, fill should be on <Bar/> or individual Cell.
-                                // For simplicity, we'll apply fill directly on Bar or handle via CSS if advanced needed.
-                                // Recharts <Bar> component takes a `fill` prop directly, or <Cell> subcomponents.
-                                // The provided ChartConfig approach should handle colors by mapping data keys.
-                            ))}
+                        <Bar dataKey="count" radius={5} fill="hsl(var(--primary))">
+                           {/* Recharts typically handles fill per bar or for the whole Bar component
+                               If individual fills are needed per 'metric', it's often done with <Cell>
+                               or by having separate <Bar> components.
+                               For simplicity, a single primary fill is applied here.
+                               The `chartData.fill` property isn't directly used by <Bar> unless iterating.
+                           */}
                         </Bar>
                     </BarChart>
                 </ResponsiveContainer>
@@ -428,4 +422,3 @@ export default function DashboardClientPage() {
   );
 }
 
-    
