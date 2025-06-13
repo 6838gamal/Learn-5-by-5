@@ -26,6 +26,30 @@ export interface GenerateWordSetActionResult {
   count?: number; 
 }
 
+function getErrorMessage(error: unknown, defaultMessage: string): string {
+  if (error instanceof z.ZodError) {
+    return error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(", ");
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+    return error.message;
+  }
+  if (error && typeof error === 'object' && 'error' in error && typeof error.error === 'string') {
+    return error.error;
+  }
+  try {
+    return JSON.stringify(error);
+  } catch {
+    // If stringification fails, return the default message
+  }
+  return defaultMessage;
+}
+
 export async function handleGenerateWordSet(
   data: GenerateWordSetInput
 ): Promise<GenerateWordSetActionResult> {
@@ -43,14 +67,8 @@ export async function handleGenerateWordSet(
     }
     return { error: "No word entries were generated. Please try again." };
   } catch (e) {
-    console.error("Error generating word set:", e);
-    if (e instanceof z.ZodError) {
-      return { error: e.errors.map(err => err.message).join(", ") };
-    }
-    let errorMessage = "An unexpected error occurred while generating words.";
-    if (e instanceof Error) {
-        errorMessage = e.message;
-    }
+    console.error("Error in handleGenerateWordSet action:", e);
+    const errorMessage = getErrorMessage(e, "An unexpected error occurred while generating words.");
     return { error: errorMessage };
   }
 }
@@ -83,14 +101,8 @@ export async function handleGenerateConversation(
     }
     return { error: "No conversation was generated. Please try again." };
   } catch (e) {
-    console.error("Error generating conversation:", e);
-    if (e instanceof z.ZodError) {
-      return { error: e.errors.map(err => err.message).join(", ") };
-    }
-    let errorMessage = "An unexpected error occurred while generating the conversation.";
-     if (e instanceof Error) {
-        errorMessage = e.message;
-    }
+    console.error("Error in handleGenerateConversation action:", e);
+    const errorMessage = getErrorMessage(e, "An unexpected error occurred while generating the conversation.");
     return { error: errorMessage };
   }
 }
@@ -118,7 +130,8 @@ export async function logWordSetActivityAction(data: LogWordSetActivityInput): P
     return { success: true };
   } catch (e) {
     console.error("Error logging word set activity:", e);
-    return { success: false, error: e instanceof Error ? e.message : "Failed to log activity." };
+    const errorMessage = getErrorMessage(e, "Failed to log word set activity.");
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -143,7 +156,8 @@ export async function logConversationActivityAction(data: LogConversationActivit
     return { success: true };
   } catch (e) {
     console.error("Error logging conversation activity:", e);
-    return { success: false, error: e instanceof Error ? e.message : "Failed to log activity." };
+    const errorMessage = getErrorMessage(e, "Failed to log conversation activity.");
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -162,7 +176,8 @@ export async function fetchUserActivitiesAction(data: {userId: string, count?: n
     return { activities };
   } catch (e) {
     console.error("Error fetching user activities:", e);
-    return { error: e instanceof Error ? e.message : "Failed to fetch activities." };
+    const errorMessage = getErrorMessage(e, "Failed to fetch activities.");
+    return { error: errorMessage };
   }
 }
 
@@ -180,7 +195,8 @@ export async function fetchUserLearningStatsAction(data: {userId: string}): Prom
     return { stats };
   } catch (e) {
     console.error("Error fetching user learning stats:", e);
-    return { error: e instanceof Error ? e.message : "Failed to fetch learning stats." };
+    const errorMessage = getErrorMessage(e, "Failed to fetch learning stats.");
+    return { error: errorMessage };
   }
 }
 
@@ -218,8 +234,10 @@ export async function handleSupportRequest(data: SupportRequestInput): Promise<H
   } catch (e) {
     console.error("Error handling support request:", e);
     if (e instanceof z.ZodError) {
+      // The getErrorMessage function handles ZodError specifically, but if you want to return `errors` array:
       return { error: "Validation failed. Please check your input.", errors: e.errors };
     }
-    return { error: e instanceof Error ? e.message : "An unexpected error occurred. Please try again." };
+    const errorMessage = getErrorMessage(e, "An unexpected error occurred. Please try again.");
+    return { error: errorMessage };
   }
 }
