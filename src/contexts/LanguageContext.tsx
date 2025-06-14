@@ -26,59 +26,58 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Listen to auth changes
+  // Listen to auth changes to update currentUser state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
-      // If user logs out, reset to default language or potentially last guest setting
-      if (!user) {
-        const storedLang = localStorage.getItem(EFFECTIVE_LANGUAGE_STORAGE_KEY) as AppLanguageSetting | null;
-        _setLanguage(storedLang || 'en'); 
-        setIsInitialized(true);
-      }
-      // If user logs in, fetching will be triggered by currentUser dependency below
+      setCurrentUser(user); // This will trigger the main language initialization effect below
     });
     return () => unsubscribe();
-  }, []);
+  }, []); // Runs once to set up the auth listener
 
-  // Fetch initial language for logged-in user or from localStorage
+  // Effect to initialize or re-initialize language settings when currentUser changes or on first load
   useEffect(() => {
+    let didCancel = false; // To prevent state updates if the component unmounts during async operations
+
     const initializeLanguage = async () => {
-      let initialLang: AppLanguageSetting = 'en';
+      if (didCancel) return;
+      setIsInitialized(false); // Set to false during (re)initialization
+      let langToSet: AppLanguageSetting = 'en'; // Default fallback
+
       if (currentUser) {
         try {
           const result = await fetchUserSettingsAction({ userId: currentUser.uid });
-          if (result.settings?.appLanguage) {
-            initialLang = result.settings.appLanguage;
+          if (!didCancel && result.settings?.appLanguage) {
+            langToSet = result.settings.appLanguage;
           }
         } catch (error) {
           console.error("Failed to fetch user language settings:", error);
-          // Fallback to localStorage or default
+          // Fallback to localStorage or 'en' if fetching user settings fails
           const storedLang = localStorage.getItem(EFFECTIVE_LANGUAGE_STORAGE_KEY) as AppLanguageSetting | null;
-          initialLang = storedLang || 'en';
+          if (storedLang) langToSet = storedLang;
         }
       } else {
-        // No user, try localStorage
+        // No user, try localStorage as a fallback
         const storedLang = localStorage.getItem(EFFECTIVE_LANGUAGE_STORAGE_KEY) as AppLanguageSetting | null;
-        initialLang = storedLang || 'en';
+        if (storedLang) langToSet = storedLang;
       }
-      _setLanguage(initialLang);
-      localStorage.setItem(EFFECTIVE_LANGUAGE_STORAGE_KEY, initialLang); // Ensure localStorage is synced
-      setIsInitialized(true);
+
+      if (!didCancel) {
+        _setLanguage(langToSet);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(EFFECTIVE_LANGUAGE_STORAGE_KEY, langToSet);
+        }
+        setIsInitialized(true); // Signal that initialization is complete
+      }
     };
 
-    // Only initialize if not already initialized or if user changes (e.g., login/logout)
-    // For logout, the auth listener above handles resetting to 'en' or localStorage
-    if (currentUser && !isInitialized) {
-      initializeLanguage();
-    } else if (!currentUser && !isInitialized) { // Handle initial load when no user is logged in yet
-      initializeLanguage();
-    }
+    initializeLanguage();
 
-  }, [currentUser, isInitialized]);
+    return () => {
+      didCancel = true; // Cleanup on unmount or if currentUser changes triggering a re-run
+    };
+  }, [currentUser]); // Re-run this effect when currentUser changes
 
-
-  // Update direction and document attribute when language changes
+  // Update document direction and lang attribute when language state changes
   useEffect(() => {
     const newDirection = language === 'ar' ? 'rtl' : 'ltr';
     setDirection(newDirection);
@@ -92,6 +91,7 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
     _setLanguage(newLang);
     if (typeof window !== 'undefined') {
       localStorage.setItem(EFFECTIVE_LANGUAGE_STORAGE_KEY, newLang);
+      // The useEffect above will handle document.dir and document.lang updates
     }
   }, []);
 
@@ -101,5 +101,3 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
     </LanguageContext.Provider>
   );
 };
-
-    
