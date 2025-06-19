@@ -53,6 +53,10 @@ function getErrorMessage(error: unknown, defaultMessage: string): string {
 export async function handleGenerateWordSet(
   data: GenerateWordSetInput
 ): Promise<GenerateWordSetActionResult> {
+  if (!process.env.GOOGLE_API_KEY) {
+    console.error("CRITICAL: GOOGLE_API_KEY is not set for word generation.");
+    return { error: "AI Service API Key is not configured. Please contact support or check server configuration." };
+  }
   try {
     const validatedData = WordSetActionInputSchema.parse(data); 
     const result: GenerateWordSetOutput = await generateWordSet(validatedData); 
@@ -89,6 +93,10 @@ export interface GenerateConversationActionResult {
 export async function handleGenerateConversation(
   data: GenerateConversationInput
 ): Promise<GenerateConversationActionResult> {
+  if (!process.env.GOOGLE_API_KEY) {
+    console.error("CRITICAL: GOOGLE_API_KEY is not set for conversation generation.");
+    return { error: "AI Service API Key is not configured. Please contact support or check server configuration." };
+  }
   try {
     const validatedData = ConversationActionInputSchema.parse(data);
     const result: GenerateConversationOutput = await generateConversation(validatedData);
