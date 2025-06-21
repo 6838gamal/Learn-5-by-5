@@ -47,18 +47,6 @@ export default function LoginForm() {
     setIsLoading(true);
     setError(null);
 
-    if (auth.app.options.appId === "YOUR_APP_ID_HERE") {
-        const configErrorMessage = "Firebase configuration error: The 'appId' in src/lib/firebase.ts is still the placeholder 'YOUR_APP_ID_HERE'. Please update it with your actual App ID from the Firebase console.";
-        setError(configErrorMessage);
-        toast({
-            variant: "destructive",
-            title: "Configuration Error",
-            description: configErrorMessage,
-        });
-        setIsLoading(false);
-        return;
-    }
-
     try {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       toast({ title: "Login Successful", description: `Welcome back, ${userCredential.user.email}!` });
@@ -68,9 +56,9 @@ export default function LoginForm() {
       if (e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
         errorMessage = "Invalid email or password. Please try again.";
       } else if (e.code === 'auth/network-request-failed') {
-        errorMessage = "Network error. Please check your internet connection and Firebase configuration (including App ID in src/lib/firebase.ts).";
+        errorMessage = "Network error. Please check your internet connection.";
       } else if (e.code === 'auth/invalid-app-id') {
-        errorMessage = "Invalid App ID in Firebase configuration. This usually means the 'appId' in src/lib/firebase.ts is incorrect or missing. Please verify it with your Firebase project settings.";
+        errorMessage = "Configuration Error: Invalid App ID. Please verify your Firebase project settings.";
       }
       else if (e.message) {
         errorMessage = e.message;
@@ -85,18 +73,6 @@ export default function LoginForm() {
     setIsLoading(true);
     setError(null);
     const provider = new GoogleAuthProvider(); 
-
-    if (auth.app.options.appId === "YOUR_APP_ID_HERE") {
-        const configErrorMessage = "Firebase configuration error: The 'appId' in src/lib/firebase.ts is still the placeholder 'YOUR_APP_ID_HERE'. Please update it with your actual App ID from the Firebase console for social logins to work.";
-        setError(configErrorMessage);
-        toast({
-            variant: "destructive",
-            title: "Configuration Error",
-            description: configErrorMessage,
-        });
-        setIsLoading(false);
-        return;
-    }
 
     try {
       const result: UserCredential = await signInWithPopup(auth, provider);
@@ -117,9 +93,9 @@ export default function LoginForm() {
       } else if (e.code === 'auth/cancelled-popup-request') {
         errorMessage = "Login cancelled. Multiple popup requests were made.";
       } else if (e.code === 'auth/network-request-failed') {
-        errorMessage = "Network error. Please check your internet connection and Firebase configuration (including App ID in src/lib/firebase.ts).";
+        errorMessage = "Network error. Please check your internet connection.";
       } else if (e.code === 'auth/invalid-app-id') {
-         errorMessage = "Invalid App ID in Firebase configuration for social login. This usually means the 'appId' in src/lib/firebase.ts is incorrect or missing. Please verify it with your Firebase project settings.";
+         errorMessage = "Configuration Error: Invalid App ID for Google Sign-In. Please check the following: \n1. The `appId` in `src/lib/firebase.ts` must exactly match the Web App ID from your Firebase project settings. \n2. The Google Sign-In provider must be enabled in the Firebase Console. \n3. Ensure your project's support email is set in the Firebase Console (Project settings > General).";
       } else if (e.code) {
         errorMessage = e.message;
       }
@@ -127,7 +103,7 @@ export default function LoginForm() {
       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: errorMessage,
+        description: "Configuration error. Please check the details shown on the login form.",
       });
     } finally {
       setIsLoading(false);
@@ -141,7 +117,7 @@ export default function LoginForm() {
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Login Failed</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription style={{ whiteSpace: 'pre-wrap' }}>{error}</AlertDescription>
           </Alert>
         )}
         <FormField
