@@ -47,21 +47,6 @@ export default function LoginForm() {
     setIsLoading(true);
     setError(null);
 
-    const IS_TEST_MODE = false; 
-
-    if (IS_TEST_MODE && data.email === "admin@gmail.com" && data.password === "admingamal") {
-      console.log("TEST MODE ACTIVE: Simulating login for admin@gmail.com");
-      await new Promise(resolve => setTimeout(resolve, 500)); 
-      
-      toast({ 
-        title: "Login Successful (Test Mode)", 
-        description: `Welcome back, admin@gmail.com! You are logged in for testing.` 
-      });
-      router.push('/'); 
-      setIsLoading(false);
-      return; 
-    }
-
     if (auth.app.options.appId === "YOUR_APP_ID_HERE") {
         const configErrorMessage = "Firebase configuration error: The 'appId' in src/lib/firebase.ts is still the placeholder 'YOUR_APP_ID_HERE'. Please update it with your actual App ID from the Firebase console.";
         setError(configErrorMessage);
