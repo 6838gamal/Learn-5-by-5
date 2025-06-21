@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -86,7 +85,9 @@ export default function LoginForm() {
     } catch (e: any) {
       console.error(`${providerName} login error:`, e);
       let errorMessage = "An unexpected error occurred during social login.";
-      if (e.code === 'auth/account-exists-with-different-credential') {
+      if (e.code === 'auth/operation-not-allowed') {
+        errorMessage = "Google Sign-In is not enabled for this project. \n\nTo fix this: \n1. Go to your Firebase Console. \n2. Navigate to Authentication > Sign-in method. \n3. Find 'Google' in the list of providers and enable it.";
+      } else if (e.code === 'auth/account-exists-with-different-credential') {
         errorMessage = "An account already exists with the same email. Try signing in with the original method.";
       } else if (e.code === 'auth/popup-closed-by-user') {
         errorMessage = "Login cancelled. The sign-in popup was closed.";
