@@ -34,6 +34,7 @@ import { onAuthStateChanged, type User } from 'firebase/auth';
 import { getTargetLanguageSettingAction, getTargetFieldSettingAction } from '@/app/settingsActions';
 import { fetchUserActivitiesAction } from '@/app/actions';
 import type { WordEntry, WordSetActivityRecord } from '@/lib/activityStore';
+import { TARGET_LANGUAGES, TARGET_FIELDS } from '@/constants/data';
 
 // Helper function to convert slug to title
 function slugToTitle(slug: string): string {
@@ -218,7 +219,7 @@ export default function ExerciseDetailPage() {
                 <AlertTriangle className="h-4 w-4 text-primary" />
                 <AlertTitle>No Words Available for {langLabel} - {fieldLabel}</AlertTitle>
                 <AlertDescription>
-                    No words found for the selected language and field. Please <Link href="/words" className="underline hover:text-primary font-medium">generate some words</Link> first.
+                    You have not generated any words for this combination yet. Please go to the <Link href="/words" className="underline hover:text-primary font-medium">Words section</Link> to generate a new set.
                 </AlertDescription>
             </Alert>
         );
@@ -241,10 +242,30 @@ export default function ExerciseDetailPage() {
 
                 <div className="flex justify-between items-center">
                     <Button onClick={() => setCurrentIndex(p => Math.max(0, p - 1))} disabled={currentIndex === 0}>Previous</Button>
-                    <Button onClick={() => setCurrentIndex(p => Math.min(words.length - 1, p + 1))} disabled={currentIndex === words.length - 1}>Next</Button>
+                    <Button onClick={() => {
+                        if (currentIndex === words.length - 1) {
+                            setExerciseStatus("complete");
+                        } else {
+                            setCurrentIndex(p => p + 1)
+                        }
+                    }}>
+                        {currentIndex === words.length - 1 ? 'Finish' : 'Next'}
+                    </Button>
                 </div>
             </div>
         )
+    }
+
+    if (exerciseStatus === 'complete') {
+        return (
+            <div className="text-center space-y-4">
+                <h3 className="text-xl font-semibold text-primary">Exercise Complete!</h3>
+                <p className="text-muted-foreground">Great job! You've reviewed all the words.</p>
+                <Button onClick={() => startExercise(true)}>
+                    <RotateCcw className="mr-2 h-4 w-4"/> Start Over
+                </Button>
+            </div>
+        );
     }
 
     if (exerciseStatus === 'idle' && words.length > 0 && !isDataLoading) {
@@ -274,7 +295,7 @@ export default function ExerciseDetailPage() {
             </CardDescription>
           }
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="min-h-[300px] flex flex-col justify-center">
             
             {renderExerciseContent()}
 
