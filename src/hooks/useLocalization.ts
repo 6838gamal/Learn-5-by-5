@@ -1,7 +1,7 @@
 // src/hooks/useLocalization.ts
 "use client";
 
-import { useContext } from 'react';
+import { useContext, useCallback } from 'react';
 import { LanguageContext, type LanguageDirection } from '@/contexts/LanguageContext';
 import { translations, type Translations } from '@/lib/translations'; // Ensure this path is correct
 import type { AppLanguageSetting } from '@/lib/userSettingsService';
@@ -22,7 +22,7 @@ export const useLocalization = (): UseLocalizationOutput => {
 
   const { language, direction, isInitialized } = context;
 
-  const t = (key: keyof Translations, replacements?: Record<string, string | number>): string => {
+  const t = useCallback((key: keyof Translations, replacements?: Record<string, string | number>): string => {
     let text = translations[language]?.[key] || translations.en[key] || key;
 
     if (typeof text === 'function') {
@@ -35,9 +35,7 @@ export const useLocalization = (): UseLocalizationOutput => {
         });
     }
     return text as string;
-  };
+  }, [language]);
 
   return { t, language, direction, isInitialized };
 };
-
-    

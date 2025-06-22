@@ -29,7 +29,7 @@ const FREE_APP_LANGUAGES: AppLanguageSetting[] = ["en", "ar"];
 
 export default function SettingsPage() {
   const { toast } = useToast();
-  const { t, language: currentContextLang, setLanguage: setContextLanguage, isInitialized: localeInitialized } = useLocalization(); // Use localization hook
+  const { t, language: currentContextLang, setLanguage: setContextLanguage } = useLocalization(); // Use localization hook
   const languageContext = useContext(LanguageContext);
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -160,7 +160,7 @@ export default function SettingsPage() {
       ) : <SelectValue placeholder={t('settingsSelectAppLanguage')} />;
   }, [pendingAppLanguage, t]);
 
-  if (isLoading || !localeInitialized) {
+  if (isLoading) {
     return (
       <div className="container mx-auto py-8 px-4">
         <Card className="w-full max-w-2xl mx-auto shadow-xl">
