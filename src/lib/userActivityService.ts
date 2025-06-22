@@ -81,7 +81,7 @@ export async function getActivitiesFromFirestore(userId: string, count?: number)
     return activities;
   } catch (error) {
     console.error("Error fetching activities from Firestore:", error);
-    return []; // Return empty on error to avoid breaking UI
+    throw error; // Re-throw the error to be handled by the calling server action
   }
 }
 
@@ -129,6 +129,6 @@ export async function getLearningStatsFromFirestore(userId: string): Promise<Lea
     };
   } catch (error) {
     console.error("Error calculating stats from Firestore:", error);
-    return defaultStats;
+    throw error; // Re-throw the error to be handled by the calling server action
   }
 }
