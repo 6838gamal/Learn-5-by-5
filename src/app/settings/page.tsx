@@ -29,7 +29,7 @@ const FREE_APP_LANGUAGES: AppLanguageSetting[] = ["en", "ar"];
 
 export default function SettingsPage() {
   const { toast } = useToast();
-  const { t, language: currentContextLang, setLanguage: setContextLanguage } = useLocalization(); // Use localization hook
+  const { t, language: currentContextLang, direction } = useLocalization(); // Use localization hook
   const languageContext = useContext(LanguageContext);
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -254,7 +254,7 @@ export default function SettingsPage() {
               value={pendingTargetLanguage} 
               onValueChange={(value) => setPendingTargetLanguage(value)}
               disabled={isSaving}
-              dir={currentContextLang === 'ar' ? 'rtl' : 'ltr'}
+              dir={direction}
             >
               <SelectTrigger className="w-full sm:w-[320px]">
                 {targetLanguageDisplayNode}
@@ -286,7 +286,7 @@ export default function SettingsPage() {
               value={pendingTargetField} 
               onValueChange={(value) => setPendingTargetField(value)}
               disabled={isSaving}
-              dir={currentContextLang === 'ar' ? 'rtl' : 'ltr'}
+              dir={direction}
             >
               <SelectTrigger className="w-full sm:w-[320px]">
                 <SelectValue placeholder={t('settingsSelectTargetField')} />
@@ -339,7 +339,7 @@ export default function SettingsPage() {
               value={pendingAppLanguage} 
               onValueChange={(value) => setPendingAppLanguage(value as AppLanguageSetting)}
               disabled={isSaving}
-              dir={currentContextLang === 'ar' ? 'rtl' : 'ltr'}
+              dir={direction}
             >
               <SelectTrigger className="w-full sm:w-[280px]">
                  {appLanguageDisplayNode}
