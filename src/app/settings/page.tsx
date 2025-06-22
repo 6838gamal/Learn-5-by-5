@@ -45,31 +45,31 @@ export default function SettingsPage() {
   const [pendingTextSize, setPendingTextSize] = useState("medium"); 
   const [pendingColorContrast, setPendingColorContrast] = useState("default"); 
 
-  const loadUserSettings = useCallback(async (user: User) => {
-    setIsLoading(true);
-    setError(null);
-    const result: FetchSettingsActionResult = await fetchUserSettingsAction({ userId: user.uid });
-    if (result.settings) {
-      setPendingNumberOfWords(result.settings.numberOfWords);
-      setPendingAppLanguage(result.settings.appLanguage);
-      setPendingTargetLanguage(result.settings.targetLanguage || "en");
-      setPendingTargetField(result.settings.targetField || "daily_conversation");
-      setPendingEnableAccessibilityAids(result.settings.enableAccessibilityAids || false);
-      // setPendingTextSize(result.settings.textSize || "medium");
-      // setPendingColorContrast(result.settings.colorContrast || "default");
-    } else if (result.error) {
-      setError(result.error);
-      toast({ variant: "destructive", title: t('error'), description: result.error });
-      setPendingNumberOfWords(5);
-      setPendingAppLanguage("en");
-      setPendingTargetLanguage("en");
-      setPendingTargetField("daily_conversation");
-      setPendingEnableAccessibilityAids(false);
-    }
-    setIsLoading(false);
-  }, [toast, t]);
-
   useEffect(() => {
+    // This function is defined inside useEffect to avoid it being a dependency,
+    // which was causing a re-render loop.
+    const loadUserSettings = async (user: User) => {
+      setIsLoading(true);
+      setError(null);
+      const result: FetchSettingsActionResult = await fetchUserSettingsAction({ userId: user.uid });
+      if (result.settings) {
+        setPendingNumberOfWords(result.settings.numberOfWords);
+        setPendingAppLanguage(result.settings.appLanguage);
+        setPendingTargetLanguage(result.settings.targetLanguage || "en");
+        setPendingTargetField(result.settings.targetField || "daily_conversation");
+        setPendingEnableAccessibilityAids(result.settings.enableAccessibilityAids || false);
+      } else if (result.error) {
+        setError(result.error);
+        toast({ variant: "destructive", title: t('error'), description: result.error });
+        setPendingNumberOfWords(5);
+        setPendingAppLanguage("en");
+        setPendingTargetLanguage("en");
+        setPendingTargetField("daily_conversation");
+        setPendingEnableAccessibilityAids(false);
+      }
+      setIsLoading(false);
+    };
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
       if (user) {
@@ -80,7 +80,7 @@ export default function SettingsPage() {
       }
     });
     return () => unsubscribe();
-  }, [loadUserSettings, t]);
+  }, [toast, t]); // Dependencies are stable, preventing loops.
 
 
   const handleSaveSettings = async () => {
@@ -115,8 +115,6 @@ export default function SettingsPage() {
         }
 
         if (isFree) {
-          // For Arabic or English, the change might be immediate if i18n is fully set up
-          // For now, keep conceptual message
           descriptionMessage = t('toastSettingsSavedDescriptionConceptual', { langLabel: langLabel });
         } else {
           descriptionMessage = t('toastSettingsSavedDescriptionPremium', { langLabel: langLabel });
@@ -153,7 +151,6 @@ export default function SettingsPage() {
   }, [pendingTargetLanguage, t]);
 
   const appLanguageDisplayNode = React.useMemo(() => {
-    // Ensure pendingAppLanguage is valid before finding.
     const validLang = APP_LANGUAGES_OPTIONS.find(l => l.value.toLowerCase().startsWith(pendingAppLanguage?.toLowerCase() || 'en'));
     return validLang ? (
         <div className="flex items-center gap-2">
@@ -221,7 +218,7 @@ export default function SettingsPage() {
           
           <div className="space-y-4">
             <h3 className="text-xl font-semibold text-foreground flex items-center">
-              <ListPlus className="w-6 h-6 text-accent me-2" /> {/* Use me-2 for RTL */}
+              <ListPlus className="w-6 h-6 text-accent me-2" />
               {t('settingsWordGenerationTitle')}
             </h3>
             <Label htmlFor="num-words-group" className="text-base">{t('settingsNumWordsLabel')}</Label>
@@ -467,5 +464,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
-    
