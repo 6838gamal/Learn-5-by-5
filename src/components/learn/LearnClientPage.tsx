@@ -148,10 +148,20 @@ export default function LearnClientPage() {
 
 
   useEffect(() => {
-    if (!carouselApi) return;
-    setCurrentCarouselIndex(carouselApi.selectedScrollSnap());
-    carouselApi.on("select", () => setCurrentCarouselIndex(carouselApi.selectedScrollSnap()));
-    return () => carouselApi.off("select", () => setCurrentCarouselIndex(carouselApi.selectedScrollSnap()));
+    if (!carouselApi) {
+      return;
+    }
+
+    const onSelect = () => {
+      setCurrentCarouselIndex(carouselApi.selectedScrollSnap());
+    };
+
+    carouselApi.on("select", onSelect);
+    onSelect(); // Set initial value
+
+    return () => {
+      carouselApi.off("select", onSelect);
+    };
   }, [carouselApi]);
 
   useEffect(() => {
