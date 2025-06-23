@@ -66,6 +66,11 @@ export interface Translations {
   conversationsGeneratedTitle: string;
   conversationsAlertNoWords: (replacements: { langLabel: string }) => string;
   conversationsAlertGoToWords: string;
+  conversationsPreviousTitle: string;
+  conversationsAccordionTriggerLabel: (replacements: { date: string; words: string }) => string;
+  conversationsAlertNoHistory: string;
+  conversationsAlertNoHistoryTitle: string;
+
   // Words Page (LearnClientPage)
   wordsTitle: string;
   wordsGeneratingForLabel: (replacements: { lang: string, field: string }) => string;
@@ -285,6 +290,10 @@ export const translations: Record<"en" | "ar", Translations> = {
     conversationsGeneratedTitle: "Generated Conversation:",
     conversationsAlertNoWords: ({ langLabel }) => `You haven't generated any words in ${langLabel} yet.`,
     conversationsAlertGoToWords: "Words section",
+    conversationsPreviousTitle: "Previously Generated Conversations",
+    conversationsAccordionTriggerLabel: ({ date, words }) => `Conversation from ${date} with: ${words}...`,
+    conversationsAlertNoHistory: "No previously generated conversations found for this language.",
+    conversationsAlertNoHistoryTitle: "No History Yet",
     wordsTitle: "Word Learning Sets",
     wordsGeneratingForLabel: ({ lang, field }) => `Generating words for: ${lang} in ${field}.`,
     wordsChangePreferencesLink: "Change preferences in settings",
@@ -493,6 +502,10 @@ export const translations: Record<"en" | "ar", Translations> = {
     conversationsGeneratedTitle: "المحادثة التي تم إنشاؤها:",
     conversationsAlertNoWords: ({ langLabel }) => `لم تقم بتوليد أي كلمات باللغة ${langLabel} بعد.`,
     conversationsAlertGoToWords: "قسم الكلمات",
+    conversationsPreviousTitle: "المحادثات التي تم إنشاؤها سابقا",
+    conversationsAccordionTriggerLabel: ({ date, words }) => `محادثة من ${date} باستخدام: ${words}...`,
+    conversationsAlertNoHistory: "لم يتم العثور على محادثات تم إنشاؤها سابقا لهذه اللغة.",
+    conversationsAlertNoHistoryTitle: "لا يوجد سجل حتى الآن",
     wordsTitle: "مجموعات تعلم الكلمات",
     wordsGeneratingForLabel: ({ lang, field }) => `جاري توليد كلمات لـ: ${lang} في ${field}.`,
     wordsChangePreferencesLink: "تغيير التفضيلات في الإعدادات",
@@ -642,3 +655,5 @@ export const translations: Record<"en" | "ar", Translations> = {
     donateToastThankYouDescription: ({ amount }) => `نقدر تبرعك السخي بمبلغ ${amount}$. (هذا إجراء نائب)`,
   },
 };
+
+    
