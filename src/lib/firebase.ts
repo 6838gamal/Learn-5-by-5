@@ -7,7 +7,7 @@ import { getStorage, type FirebaseStorage } from 'firebase/storage';
 
 // User-provided Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyDeN1mxcNwQqOyBtLE2AgZoBzf5exPYBoc",
+  apiKey: "AIzaSyBd0dva0RcI1lI_SBfhckBFCADtdtSBUtw",
   authDomain: "learn-5-by-5.firebaseapp.com",
   projectId: "learn-5-by-5",
   storageBucket: "learn-5-by-5.appspot.com", // Corrected storage bucket format

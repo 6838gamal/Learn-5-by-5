@@ -228,12 +228,12 @@ export default function ConversationsPage() {
   
   const targetLanguageLabel = useMemo(() => {
       const lang = TARGET_LANGUAGES.find(l => l.value === settingsTargetLanguage);
-      return lang ? lang.label : settingsTargetLanguage;
+      return lang ? lang.label : (settingsTargetLanguage || "");
   }, [settingsTargetLanguage]);
 
   const targetFieldLabel = useMemo(() => {
     const field = TARGET_FIELDS.find(f => f.value === settingsTargetField);
-    return field ? field.label : settingsTargetField;
+    return field ? field.label : (settingsTargetField || "");
   }, [settingsTargetField]);
 
   if (!isClient || isSettingsLoading) { 
@@ -345,7 +345,7 @@ export default function ConversationsPage() {
                    <AlertTriangle className="h-4 w-4 text-primary" />
                   <AlertTitle>No Words Yet</AlertTitle>
                   <AlertDescription>
-                    {t('conversationsAlertNoWords', { langLabel: targetLanguageLabel || '', fieldLabel: targetFieldLabel || '' })}
+                    {t('conversationsAlertNoWords', { langLabel: targetLanguageLabel, fieldLabel: targetFieldLabel })}
                     <Link href="/words" className="underline hover:text-primary font-medium ml-1">{t('conversationsAlertGoToWords')}</Link>!
                   </AlertDescription>
                 </Alert>

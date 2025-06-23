@@ -299,8 +299,8 @@ export default function LearnClientPage() {
 
   const handleGoToHome = () => router.push("/");
   
-  const targetLanguageLabel = TARGET_LANGUAGES.find(l => l.value === settingsTargetLanguage)?.label || settingsTargetLanguage;
-  const targetFieldLabel = TARGET_FIELDS.find(f => f.value === settingsTargetField)?.label || settingsTargetField;
+  const targetLanguageLabel = TARGET_LANGUAGES.find(l => l.value === settingsTargetLanguage)?.label || settingsTargetLanguage || "";
+  const targetFieldLabel = TARGET_FIELDS.find(f => f.value === settingsTargetField)?.label || settingsTargetField || "";
 
   if (isSettingsLoading) {
      return (
@@ -374,7 +374,7 @@ export default function LearnClientPage() {
             </CardTitle>
           </div>
           <CardDescription className="text-center text-lg">
-            {t('wordsGeneratingForLabel', { lang: targetLanguageLabel || '', field: targetFieldLabel || '' })}
+            {t('wordsGeneratingForLabel', { lang: targetLanguageLabel, field: targetFieldLabel })}
             <br />
             {currentUser && (
                 <Link href="/settings" className="text-sm underline text-primary hover:text-accent">{t('wordsChangePreferencesLink')}</Link>
@@ -436,7 +436,7 @@ export default function LearnClientPage() {
               <Alert variant="default" className="bg-secondary/30">
                 <AlertTriangle className="h-4 w-4 text-primary"/>
                 <AlertTitle>{t('wordsAlertNoHistoryTitle')}</AlertTitle>
-                <AlertDescription>{t('wordsAlertNoHistory', { lang: targetLanguageLabel || '', field: targetFieldLabel || '' })}</AlertDescription>
+                <AlertDescription>{t('wordsAlertNoHistory', { lang: targetLanguageLabel, field: targetFieldLabel })}</AlertDescription>
               </Alert>
             )}
           </div>
