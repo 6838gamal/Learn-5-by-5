@@ -44,7 +44,8 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts";
-import { useRouter } from "next/navigation"; // Added router
+import { useRouter } from "next/navigation";
+import { useLocalization } from "@/hooks/useLocalization";
 
 const initialStats: LearningStats = { 
   totalWordsLearned: 0, 
@@ -62,10 +63,10 @@ export default function DashboardClientPage() {
   const [selectedActivity, setSelectedActivity] = useState<ActivityRecord | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter(); // Initialize router
+  const router = useRouter();
+  const { t } = useLocalization();
 
   const loadDashboardData = useCallback(async (user: User | null) => {
-    // setIsLoadingPage(true); // isLoadingPage is true by default or when auth state changes
     setError(null);
     let loadedStats: LearningStats | null = initialStats;
     let loadedActivity: ActivityRecord[] = [];
@@ -88,11 +89,9 @@ export default function DashboardClientPage() {
         setError(prevError => `${prevError || ""} ${activityResult.error || "Could not load recent activity."}`.trim());
       }
     } else if (auth.app.options.apiKey === "YOUR_API_KEY_HERE" || auth.app.options.appId === "YOUR_APP_ID_HERE") {
-      // Test mode / Local data mode (Firebase not fully configured)
       loadedStats = getStatsLocal();
       loadedActivity = getActivityDataLocal().learnedItems.slice(0, 5);
     }
-    // If not user and Firebase is configured, redirection is handled in onAuthStateChanged
     
     setStats(loadedStats);
     setRecentActivity(loadedActivity);
@@ -106,15 +105,11 @@ export default function DashboardClientPage() {
       if (user) {
         loadDashboardData(user);
       } else {
-        // Check if Firebase is properly configured (not using placeholder keys)
         const isFirebaseConfigured = !(auth.app.options.apiKey === "YOUR_API_KEY_HERE" || auth.app.options.appId === "YOUR_APP_ID_HERE");
         
         if (isFirebaseConfigured) {
           router.push('/auth/login');
-          // setIsLoadingPage can remain true, as the page will redirect.
-          // Or set to false if you want to stop skeleton, but redirect should be fast.
         } else {
-          // Firebase not configured (test mode), load local data.
           loadDashboardData(null);
         }
       }
@@ -134,30 +129,30 @@ export default function DashboardClientPage() {
 
   const currentStats = stats || initialStats;
   const chartData = [
-    { metric: "Words", count: currentStats.totalWordsLearned, fill: "var(--color-words)" },
-    { metric: "Languages", count: currentStats.languagesCoveredCount, fill: "var(--color-languages)" },
-    { metric: "Fields", count: currentStats.fieldsCoveredCount, fill: "var(--color-fields)" },
-    { metric: "Sets", count: currentStats.wordSetsGenerated, fill: "var(--color-sets)" },
+    { metric: t('dashboardChartMetricWords'), count: currentStats.totalWordsLearned, fill: "var(--color-words)" },
+    { metric: t('dashboardChartMetricLanguages'), count: currentStats.languagesCoveredCount, fill: "var(--color-languages)" },
+    { metric: t('dashboardChartMetricFields'), count: currentStats.fieldsCoveredCount, fill: "var(--color-fields)" },
+    { metric: t('dashboardChartMetricSets'), count: currentStats.wordSetsGenerated, fill: "var(--color-sets)" },
   ];
 
   const chartConfig = {
     count: {
-      label: "Count",
+      label: t('dashboardChartLabelCount'),
     },
     words: {
-      label: "Words Learned",
+      label: t('dashboardChartMetricWords'),
       color: "hsl(var(--chart-1))",
     },
     languages: {
-      label: "Languages",
+      label: t('dashboardChartMetricLanguages'),
       color: "hsl(var(--chart-2))",
     },
     fields: {
-      label: "Fields",
+      label: t('dashboardChartMetricFields'),
       color: "hsl(var(--chart-3))",
     },
     sets: {
-      label: "Sets Generated",
+      label: t('dashboardChartMetricSets'),
       color: "hsl(var(--chart-4))",
     },
   } satisfies ChartConfig;
@@ -166,7 +161,7 @@ export default function DashboardClientPage() {
   if (!isClient || isLoadingPage) {
     return (
       <div className="container mx-auto py-8 px-4">
-        <h1 className="text-3xl font-bold mb-8 text-primary text-center">Your Learning Dashboard</h1>
+        <h1 className="text-3xl font-bold mb-8 text-primary text-center">{t('dashboardTitle')}</h1>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
           {[...Array(4)].map((_, i) => (
              <Card key={i} className="shadow-lg animate-pulse"><CardHeader><div className="h-6 bg-muted rounded w-1/2"></div></CardHeader><CardContent><div className="h-10 bg-muted rounded w-3/4"></div></CardContent></Card>
@@ -181,10 +176,10 @@ export default function DashboardClientPage() {
   }
   
   const renderActivityItem = (activity: ActivityRecord) => {
-    const timestamp = activity.timestamp ? formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true }) : 'Just now';
+    const timestamp = activity.timestamp ? formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true }) : t('dashboardActivityJustNow');
     if (activity.type === 'wordSet') {
       const wordSet = activity as WordSetActivityRecord;
-      const firstWord = wordSet.wordEntries?.[0]?.word || "words";
+      const firstWord = wordSet.wordEntries?.[0]?.word || t('dashboardActivityWords');
       return (
         <>
           <div className="flex items-center gap-2 mb-1">
@@ -192,7 +187,7 @@ export default function DashboardClientPage() {
             <span className="font-semibold text-foreground">{wordSet.language} - {wordSet.field}</span>
           </div>
           <p className="text-xs text-muted-foreground ml-6">
-            Generated {wordSet.wordEntries?.length || 0} entries ({firstWord}...).
+            {t('dashboardActivityGenerated', { count: wordSet.wordEntries?.length || 0, firstWord })}
           </p>
           <span className="text-xs text-muted-foreground/80 absolute top-3 right-3">{timestamp}</span>
         </>
@@ -203,10 +198,10 @@ export default function DashboardClientPage() {
          <>
           <div className="flex items-center gap-2 mb-1">
             <MessageSquare className="w-4 h-4 text-primary" />
-            <span className="font-semibold text-foreground">Conversation in {conv.language}</span>
+            <span className="font-semibold text-foreground">{t('dashboardActivityConversation', { language: conv.language })}</span>
           </div>
           <p className="text-xs text-muted-foreground ml-6 truncate">
-            Words: {conv.selectedWords.join(", ")}.
+            {t('dashboardActivityConversationWords', { words: conv.selectedWords.join(", ") })}
           </p>
            <span className="text-xs text-muted-foreground/80 absolute top-3 right-3">{timestamp}</span>
         </>
@@ -225,23 +220,23 @@ export default function DashboardClientPage() {
           <DialogHeader>
             <DialogTitle className="text-primary flex items-center gap-2">
               <Layers className="w-5 h-5 text-accent" />
-              Word Set Details
+              {t('dashboardDialogWordSetTitle')}
             </DialogTitle>
             <DialogDescription className="text-muted-foreground">
-              Session on <span className="font-semibold text-foreground">{wordSet.field}</span> in <span className="font-semibold text-foreground">{wordSet.language}</span>.
+              {t('dashboardDialogWordSetDesc', { field: wordSet.field, language: wordSet.language })}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="flex items-center">
-              <span className="text-sm font-medium text-muted-foreground w-24">Language:</span>
+              <span className="text-sm font-medium text-muted-foreground w-24">{t('dashboardDialogLanguage')}</span>
               <span className="text-sm text-foreground">{wordSet.language}</span>
             </div>
             <div className="flex items-center">
-              <span className="text-sm font-medium text-muted-foreground w-24">Field:</span>
+              <span className="text-sm font-medium text-muted-foreground w-24">{t('dashboardDialogField')}</span>
               <span className="text-sm text-foreground">{wordSet.field}</span>
             </div>
             <div className="flex items-start">
-              <span className="text-sm font-medium text-muted-foreground w-24 mt-1">Entries:</span>
+              <span className="text-sm font-medium text-muted-foreground w-24 mt-1">{t('dashboardDialogEntries')}</span>
               <ScrollArea className="h-48 w-full rounded-md border p-2">
                 <ul className="space-y-3">
                   {wordSet.wordEntries?.map((entry, index) => (
@@ -264,7 +259,7 @@ export default function DashboardClientPage() {
               </ScrollArea>
             </div>
             <div className="flex items-center">
-              <span className="text-sm font-medium text-muted-foreground w-24">Date:</span>
+              <span className="text-sm font-medium text-muted-foreground w-24">{t('dashboardDialogDate')}</span>
               <span className="text-sm text-foreground">
                 {selectedActivity.timestamp ? new Date(selectedActivity.timestamp).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'N/A'}
               </span>
@@ -279,19 +274,19 @@ export default function DashboardClientPage() {
           <DialogHeader>
             <DialogTitle className="text-primary flex items-center gap-2">
               <MessageSquare className="w-5 h-5 text-accent" />
-              Conversation Details
+              {t('dashboardDialogConversationTitle')}
             </DialogTitle>
             <DialogDescription className="text-muted-foreground">
-              Conversation practice in <span className="font-semibold text-foreground">{conv.language}</span>.
+              {t('dashboardDialogConversationDesc', { language: conv.language })}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="flex items-center">
-              <span className="text-sm font-medium text-muted-foreground w-32">Language:</span>
+              <span className="text-sm font-medium text-muted-foreground w-32">{t('dashboardDialogLanguage')}</span>
               <span className="text-sm text-foreground">{conv.language}</span>
             </div>
              <div className="flex items-start">
-              <span className="text-sm font-medium text-muted-foreground w-32 mt-1">Words Used:</span>
+              <span className="text-sm font-medium text-muted-foreground w-32 mt-1">{t('dashboardDialogWordsUsed')}</span>
               <ScrollArea className="h-20 w-full rounded-md border p-2">
                 <ul className="list-disc list-inside text-sm text-foreground">
                   {conv.selectedWords.map((word, index) => (
@@ -301,13 +296,13 @@ export default function DashboardClientPage() {
               </ScrollArea>
             </div>
             <div className="flex items-start">
-              <span className="text-sm font-medium text-muted-foreground w-32 mt-1">Conversation:</span>
+              <span className="text-sm font-medium text-muted-foreground w-32 mt-1">{t('dashboardDialogConversation')}</span>
               <ScrollArea className="h-32 w-full rounded-md border p-2">
                 <p className="text-sm text-foreground whitespace-pre-line">{conv.conversation}</p>
               </ScrollArea>
             </div>
             <div className="flex items-center">
-              <span className="text-sm font-medium text-muted-foreground w-32">Date:</span>
+              <span className="text-sm font-medium text-muted-foreground w-32">{t('dashboardDialogDate')}</span>
               <span className="text-sm text-foreground">
                 {selectedActivity.timestamp ? new Date(selectedActivity.timestamp).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'N/A'}
               </span>
@@ -321,15 +316,15 @@ export default function DashboardClientPage() {
 
   return (
     <div className="container mx-auto py-6 px-2 sm:px-4">
-      <h1 className="text-3xl font-bold mb-6 text-primary text-center">Learning Dashboard</h1>
+      <h1 className="text-3xl font-bold mb-6 text-primary text-center">{t('dashboardTitle')}</h1>
       
-      {error && <Alert variant="destructive" className="mb-4"><AlertTriangle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+      {error && <Alert variant="destructive" className="mb-4"><AlertTriangle className="h-4 w-4" /><AlertTitle>{t('error')}</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-        <StatCard title="Total Words Learned" value={currentStats.totalWordsLearned.toString()} icon={ListChecks} description="Unique words from generated sets." />
-        <StatCard title="Languages Explored" value={currentStats.languagesCoveredCount.toString()} icon={Languages} description="Unique languages practiced." />
-        <StatCard title="Fields Explored" value={currentStats.fieldsCoveredCount.toString()} icon={BookOpenText} description="Topics covered in word sets." />
-        <StatCard title="Total Sessions" value={currentStats.wordSetsGenerated.toString()} icon={Layers} description="Word sets & conversations." />
+        <StatCard title={t('dashboardStatTotalWords')} value={currentStats.totalWordsLearned.toString()} icon={ListChecks} description={t('dashboardStatTotalWordsDesc')} />
+        <StatCard title={t('dashboardStatLanguages')} value={currentStats.languagesCoveredCount.toString()} icon={Languages} description={t('dashboardStatLanguagesDesc')} />
+        <StatCard title={t('dashboardStatFields')} value={currentStats.fieldsCoveredCount.toString()} icon={BookOpenText} description={t('dashboardStatFieldsDesc')} />
+        <StatCard title={t('dashboardStatSessions')} value={currentStats.wordSetsGenerated.toString()} icon={Layers} description={t('dashboardStatSessionsDesc')} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
@@ -337,14 +332,14 @@ export default function DashboardClientPage() {
           <CardHeader>
             <CardTitle className="text-xl font-semibold text-primary flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-accent" />
-              Learning Overview
+              {t('dashboardOverviewTitle')}
             </CardTitle>
             <CardDescription>
-              A quick summary of your learning metrics.
+              {t('dashboardOverviewDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent className="pl-2 pr-6 pt-2">
-            {chartData.length > 0 ? (
+            {chartData.length > 0 && chartData.some(d => d.count > 0) ? (
               <ChartContainer config={chartConfig} className="aspect-video h-[250px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart accessibilityLayer data={chartData} layout="vertical" margin={{ left: 10, right: 20 }}>
@@ -355,20 +350,13 @@ export default function DashboardClientPage() {
                             cursor={{fill: 'hsl(var(--muted))'}}
                             content={<ChartTooltipContent indicator="dot" />}
                         />
-                        <Bar dataKey="count" radius={5} fill="hsl(var(--primary))">
-                           {/* Recharts typically handles fill per bar or for the whole Bar component
-                               If individual fills are needed per 'metric', it's often done with <Cell>
-                               or by having separate <Bar> components.
-                               For simplicity, a single primary fill is applied here.
-                               The `chartData.fill` property isn't directly used by <Bar> unless iterating.
-                           */}
-                        </Bar>
+                        <Bar dataKey="count" radius={5} fill="hsl(var(--primary))" />
                     </BarChart>
                 </ResponsiveContainer>
               </ChartContainer>
             ) : (
               <div className="h-[250px] flex items-center justify-center text-muted-foreground">
-                No data available for chart.
+                {t('dashboardChartNoData')}
               </div>
             )}
           </CardContent>
@@ -378,10 +366,10 @@ export default function DashboardClientPage() {
           <CardHeader>
             <CardTitle className="text-xl font-semibold text-primary flex items-center gap-2">
               <Activity className="w-5 h-5 text-accent" />
-              Recent Activity
+              {t('dashboardRecentActivityTitle')}
             </CardTitle>
             <CardDescription>
-              Your last few sessions.
+              {t('dashboardRecentActivityDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -401,7 +389,7 @@ export default function DashboardClientPage() {
               </ScrollArea>
             ) : (
               <p className="text-muted-foreground text-center py-4 h-[250px] flex items-center justify-center">
-                No recent activity yet. <Link href="/words" className="text-primary underline ml-1">Start learning!</Link>
+                {t('dashboardRecentActivityEmpty')} <Link href="/words" className="text-primary underline ml-1">{t('dashboardStartLearningLink')}</Link>
               </p>
             )}
           </CardContent>
@@ -413,7 +401,7 @@ export default function DashboardClientPage() {
           <DialogContent className="sm:max-w-md bg-card">
             {renderDialogContent()}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>Close</Button>
+              <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>{t('dashboardDialogClose')}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -422,3 +410,4 @@ export default function DashboardClientPage() {
   );
 }
 
+    

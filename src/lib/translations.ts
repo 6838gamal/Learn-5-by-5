@@ -1,3 +1,4 @@
+
 // src/lib/translations.ts
 
 export interface Translations {
@@ -46,8 +47,8 @@ export interface Translations {
   // Toasts
   toastSettingsSavedTitle: string;
   toastSettingsSavedDescription: string;
-  toastSettingsSavedDescriptionConceptual: string;
-  toastSettingsSavedDescriptionPremium: (langLabel: string) => string;
+  toastSettingsSavedDescriptionConceptual: (replacements: { langLabel: string }) => string;
+  toastSettingsSavedDescriptionPremium: (replacements: { langLabel: string }) => string;
   // Other
   loading: string;
   loginRequiredTitle: string;
@@ -63,16 +64,16 @@ export interface Translations {
   conversationsGeneratingButton: string;
   conversationsErrorSelectWords: string;
   conversationsGeneratedTitle: string;
-  conversationsAlertNoWords: (langLabel: string) => string;
+  conversationsAlertNoWords: (replacements: { langLabel: string }) => string;
   conversationsAlertGoToWords: string;
   // Words Page (LearnClientPage)
   wordsTitle: string;
-  wordsGeneratingForLabel: (lang: string, field: string) => string;
+  wordsGeneratingForLabel: (replacements: { lang: string, field: string }) => string;
   wordsChangePreferencesLink: string;
   wordsPreviouslyGeneratedTitle: string;
-  wordsAccordionTriggerLabel: (date: string, count: number) => string;
-  wordsAlertNoHistory: (lang: string, field: string) => string;
-  wordsGenerateNewSetButton: (count: number) => string;
+  wordsAccordionTriggerLabel: (replacements: { date: string, count: number }) => string;
+  wordsAlertNoHistory: (replacements: { lang: string, field: string }) => string;
+  wordsGenerateNewSetButton: (replacements: { count: number }) => string;
   wordsGeneratingNewSetButton: string;
   wordsYourNewSetTitle: string;
   wordsListenToWordButton: string;
@@ -80,6 +81,120 @@ export interface Translations {
   wordsSetPreferencesPromptTitle: string;
   wordsSetPreferencesPromptDescription: string;
   wordsGoToSettingsButton: string;
+
+  // New keys for full localization
+  dashboardTitle: string;
+  dashboardStatTotalWords: string;
+  dashboardStatTotalWordsDesc: string;
+  dashboardStatLanguages: string;
+  dashboardStatLanguagesDesc: string;
+  dashboardStatFields: string;
+  dashboardStatFieldsDesc: string;
+  dashboardStatSessions: string;
+  dashboardStatSessionsDesc: string;
+  dashboardOverviewTitle: string;
+  dashboardOverviewDescription: string;
+  dashboardChartNoData: string;
+  dashboardRecentActivityTitle: string;
+  dashboardRecentActivityDescription: string;
+  dashboardRecentActivityEmpty: string;
+  dashboardStartLearningLink: string;
+  dashboardActivityJustNow: string;
+  dashboardActivityWords: string;
+  dashboardActivityGenerated: (replacements: { count: number, firstWord: string }) => string;
+  dashboardActivityConversation: (replacements: { language: string }) => string;
+  dashboardActivityConversationWords: (replacements: { words: string }) => string;
+  dashboardDialogWordSetTitle: string;
+  dashboardDialogWordSetDesc: (replacements: { field: string, language: string }) => string;
+  dashboardDialogLanguage: string;
+  dashboardDialogField: string;
+  dashboardDialogEntries: string;
+  dashboardDialogDate: string;
+  dashboardDialogClose: string;
+  dashboardDialogConversationTitle: string;
+  dashboardDialogConversationDesc: (replacements: { language: string }) => string;
+  dashboardDialogWordsUsed: string;
+  dashboardDialogConversation: string;
+  dashboardChartMetricWords: string;
+  dashboardChartMetricLanguages: string;
+  dashboardChartMetricFields: string;
+  dashboardChartMetricSets: string;
+  dashboardChartLabelCount: string;
+
+  soundsTitle: (replacements: { language: string }) => string;
+  soundsDescription: (replacements: { field: string }) => string;
+  soundsLoadingPreferences: string;
+  soundsPracticeTipTitle: string;
+  soundsPracticeTipDescription: string;
+  soundsNoWordsTitle: (replacements: { langLabel: string, fieldLabel: string }) => string;
+  soundsNoWordsDescription: string;
+  
+  exercisesListTitle: string;
+  exercisesListDescription: string;
+  
+  exerciseDetailLoading: string;
+  exerciseDetailLoginRequired: string;
+  exerciseDetailSetPreferences: string;
+  exerciseDetailLoadingWords: string;
+  exerciseDetailNoWordsTitle: (replacements: { langLabel: string, fieldLabel: string }) => string;
+  exerciseDetailNoWordsDescription: string;
+  exerciseDetailQuestionProgress: (replacements: { current: number, total: number }) => string;
+  exerciseDetailInteractiveUnderConstruction: string;
+  exerciseDetailPreviousButton: string;
+  exerciseDetailNextButton: string;
+  exerciseDetailFinishButton: string;
+  exerciseDetailCompleteTitle: string;
+  exerciseDetailCompleteDescription: string;
+  exerciseDetailStartOverButton: string;
+  exerciseDetailStartButton: string;
+  exerciseDetailResumeTitle: string;
+  exerciseDetailResumeDescription: string;
+  exerciseDetailResumeButton: string;
+  exerciseDetailBackToListButton: string;
+  exerciseDetailTargetingLabel: string;
+  
+  examsListTitle: string;
+  examsListDescription: string;
+  examDetailUnderConstructionTitle: string;
+  examDetailUnderConstructionDescription: string;
+  examDetailBackToListButton: string;
+
+  supportTitle: string;
+  supportDescription: string;
+  supportNoteTitle: string;
+  supportNoteDescription: string;
+  supportSuccessTitle: string;
+  supportSuccessDescription: string;
+  supportSubmitAnother: string;
+  supportEmailLabel: string;
+  supportSubjectLabel: string;
+  supportSubjectPlaceholder: string;
+  supportCategoryLabel: string;
+  supportCategoryPlaceholder: string;
+  supportDescriptionLabel: string;
+  supportDescriptionPlaceholder: string;
+  supportSubmitButton: string;
+  supportSendingButton: string;
+  supportFooterText: string;
+  supportToastSuccessTitle: string;
+  supportToastSuccessDescription: string;
+  supportToastErrorTitle: string;
+
+  donateTitle: string;
+  donateDescription: string;
+  donateNoteTitle: string;
+  donateNoteDescription: string;
+  donateAmountLabel: string;
+  donateCustomAmount: string;
+  donateCustomAmountLabel: string;
+  donatePaymentMethodsTitle: string;
+  donatePaymentMethodsDescription: string;
+  donateButton: string;
+  donateFooterText: string;
+  donateToastInvalidAmountTitle: string;
+  donateToastInvalidAmountDescription: string;
+  donateToastThankYouTitle: string;
+  donateToastThankYouDescription: (replacements: { amount: string }) => string;
 }
 
 export const translations: Record<"en" | "ar", Translations> = {
@@ -126,8 +241,8 @@ export const translations: Record<"en" | "ar", Translations> = {
     settingsReturnToHomeButton: "Return to Home",
     toastSettingsSavedTitle: "Settings Saved!",
     toastSettingsSavedDescription: "Your preferences have been updated.",
-    toastSettingsSavedDescriptionConceptual: (langLabel: string) => `Note: App display language change to ${langLabel} is currently conceptual and will not yet change the interface language.`,
-    toastSettingsSavedDescriptionPremium: (langLabel: string) => `${langLabel} is a premium feature. Please upgrade to use it as your display language. Your preference has been saved, but the interface language will not change yet.`,
+    toastSettingsSavedDescriptionConceptual: ({ langLabel }) => `Note: App display language change to ${langLabel} is currently conceptual and will not yet change the interface language.`,
+    toastSettingsSavedDescriptionPremium: ({ langLabel }) => `${langLabel} is a premium feature. Please upgrade to use it as your display language. Your preference has been saved, but the interface language will not change yet.`,
     loading: "Loading...",
     loginRequiredTitle: "Login Required",
     loginRequiredDescription: "Please log in to access this page.",
@@ -141,15 +256,15 @@ export const translations: Record<"en" | "ar", Translations> = {
     conversationsGeneratingButton: "Generating...",
     conversationsErrorSelectWords: "Please select a language and at least two words.",
     conversationsGeneratedTitle: "Generated Conversation:",
-    conversationsAlertNoWords: (langLabel: string) => `You haven't generated any words in ${langLabel} yet.`,
+    conversationsAlertNoWords: ({ langLabel }) => `You haven't generated any words in ${langLabel} yet.`,
     conversationsAlertGoToWords: "Words section",
     wordsTitle: "Word Learning Sets",
-    wordsGeneratingForLabel: (lang, field) => `Generating words for: ${lang} in ${field}.`,
+    wordsGeneratingForLabel: ({ lang, field }) => `Generating words for: ${lang} in ${field}.`,
     wordsChangePreferencesLink: "Change preferences in settings",
     wordsPreviouslyGeneratedTitle: "Previously Generated Sets",
-    wordsAccordionTriggerLabel: (date, count) => `Generated ${date} (${count} items)`,
-    wordsAlertNoHistory: (lang, field) => `No previously generated word sets found for ${lang} - ${field}.`,
-    wordsGenerateNewSetButton: (count) => `Generate New ${count}-Word Set`,
+    wordsAccordionTriggerLabel: ({ date, count }) => `Generated ${date} (${count} items)`,
+    wordsAlertNoHistory: ({ lang, field }) => `No previously generated word sets found for ${lang} - ${field}.`,
+    wordsGenerateNewSetButton: ({ count }) => `Generate New ${count}-Word Set`,
     wordsGeneratingNewSetButton: "Generating New Set...",
     wordsYourNewSetTitle: "Your Newly Generated Set:",
     wordsListenToWordButton: "Listen to Word",
@@ -157,6 +272,113 @@ export const translations: Record<"en" | "ar", Translations> = {
     wordsSetPreferencesPromptTitle: "Set Your Preferences",
     wordsSetPreferencesPromptDescription: "Please set your preferred target language and field of knowledge in the Settings page before generating word sets.",
     wordsGoToSettingsButton: "Go to Settings",
+    // New Keys
+    dashboardTitle: "Learning Dashboard",
+    dashboardStatTotalWords: "Total Words Learned",
+    dashboardStatTotalWordsDesc: "Unique words from generated sets.",
+    dashboardStatLanguages: "Languages Explored",
+    dashboardStatLanguagesDesc: "Unique languages practiced.",
+    dashboardStatFields: "Fields Explored",
+    dashboardStatFieldsDesc: "Topics covered in word sets.",
+    dashboardStatSessions: "Total Sessions",
+    dashboardStatSessionsDesc: "Word sets & conversations.",
+    dashboardOverviewTitle: "Learning Overview",
+    dashboardOverviewDescription: "A quick summary of your learning metrics.",
+    dashboardChartNoData: "No data available for chart.",
+    dashboardRecentActivityTitle: "Recent Activity",
+    dashboardRecentActivityDescription: "Your last few sessions.",
+    dashboardRecentActivityEmpty: "No recent activity yet.",
+    dashboardStartLearningLink: "Start learning!",
+    dashboardActivityJustNow: "Just now",
+    dashboardActivityWords: "words",
+    dashboardActivityGenerated: ({ count, firstWord }) => `Generated ${count} entries (${firstWord}...).`,
+    dashboardActivityConversation: ({ language }) => `Conversation in ${language}`,
+    dashboardActivityConversationWords: ({ words }) => `Words: ${words}.`,
+    dashboardDialogWordSetTitle: "Word Set Details",
+    dashboardDialogWordSetDesc: ({ field, language }) => `Session on ${field} in ${language}.`,
+    dashboardDialogLanguage: "Language:",
+    dashboardDialogField: "Field:",
+    dashboardDialogEntries: "Entries:",
+    dashboardDialogDate: "Date:",
+    dashboardDialogClose: "Close",
+    dashboardDialogConversationTitle: "Conversation Details",
+    dashboardDialogConversationDesc: ({ language }) => `Conversation practice in ${language}.`,
+    dashboardDialogWordsUsed: "Words Used:",
+    dashboardDialogConversation: "Conversation:",
+    dashboardChartMetricWords: "Words",
+    dashboardChartMetricLanguages: "Languages",
+    dashboardChartMetricFields: "Fields",
+    dashboardChartMetricSets: "Sets",
+    dashboardChartLabelCount: "Count",
+    soundsTitle: ({ language }) => `Sounds in ${language}`,
+    soundsDescription: ({ field }) => `Practice sounds for ${field}. Click speaker icons to hear words/sentences (feature coming soon).`,
+    soundsLoadingPreferences: "Loading your preferences...",
+    soundsPracticeTipTitle: "Practice Tip",
+    soundsPracticeTipDescription: "Listen carefully. Try to repeat aloud. Generate more in the",
+    soundsNoWordsTitle: ({ langLabel, fieldLabel }) => `No Words Yet for ${langLabel} - ${fieldLabel}`,
+    soundsNoWordsDescription: "You haven't generated any words for this language and field combination yet. Go to the",
+    exercisesListTitle: "Available Exercises",
+    exercisesListDescription: "Select an exercise from the list below to start practicing.",
+    exerciseDetailLoading: "Loading Exercise...",
+    exerciseDetailLoginRequired: "Please log in to access exercises.",
+    exerciseDetailSetPreferences: "Please set your target language and field in Settings to begin an exercise.",
+    exerciseDetailLoadingWords: "Loading words...",
+    exerciseDetailNoWordsTitle: ({ langLabel, fieldLabel }) => `No Words Available for ${langLabel} - ${fieldLabel}`,
+    exerciseDetailNoWordsDescription: "You have not generated any words for this combination yet. Please go to the",
+    exerciseDetailQuestionProgress: ({ current, total }) => `Question ${current} of ${total}`,
+    exerciseDetailInteractiveUnderConstruction: "The interactive part of this exercise is under construction. For now, you can navigate through your words.",
+    exerciseDetailPreviousButton: "Previous",
+    exerciseDetailNextButton: "Next",
+    exerciseDetailFinishButton: "Finish",
+    exerciseDetailCompleteTitle: "Exercise Complete!",
+    exerciseDetailCompleteDescription: "Great job! You've reviewed all the words.",
+    exerciseDetailStartOverButton: "Start Over",
+    exerciseDetailStartButton: "Start Exercise",
+    exerciseDetailResumeTitle: "Resume Exercise?",
+    exerciseDetailResumeDescription: "We found saved progress for this exercise. Would you like to continue where you left off or start over?",
+    exerciseDetailResumeButton: "Resume",
+    exerciseDetailBackToListButton: "Back to Exercises List",
+    exerciseDetailTargetingLabel: "Targeting:",
+    examsListTitle: "Language Exams & Assessments",
+    examsListDescription: "Select an exam from the list below to prepare and test your skills.",
+    examDetailUnderConstructionTitle: "This exam/assessment is currently under construction.",
+    examDetailUnderConstructionDescription: "We're working hard to bring you this interactive assessment. Please check back soon!",
+    examDetailBackToListButton: "Back to Exams List",
+    supportTitle: "Get Support",
+    supportDescription: "Have questions or need help? Fill out the form below and our team will get back to you as soon as possible.",
+    supportNoteTitle: "System Note",
+    supportNoteDescription: "This is a UI demonstration for a support ticket submission. No actual tickets are created or sent in this prototype.",
+    supportSuccessTitle: "Request Submitted!",
+    supportSuccessDescription: "Thank you for contacting us. We've received your request (conceptually) and will get back to you soon.",
+    supportSubmitAnother: "Submit another request?",
+    supportEmailLabel: "Your Email Address",
+    supportSubjectLabel: "Subject",
+    supportSubjectPlaceholder: "e.g., Issue with word generation",
+    supportCategoryLabel: "Category",
+    supportCategoryPlaceholder: "Select a category...",
+    supportDescriptionLabel: "Details",
+    supportDescriptionPlaceholder: "Please describe your issue or question in detail...",
+    supportSubmitButton: "Submit Support Request",
+    supportSendingButton: "Sending Request...",
+    supportFooterText: "For urgent issues, please check our FAQ section (coming soon) or contact us directly if this form is unavailable.",
+    supportToastSuccessTitle: "Request Submitted!",
+    supportToastSuccessDescription: "Your support request has been sent successfully.",
+    supportToastErrorTitle: "Submission Failed",
+    donateTitle: "Support LinguaLeap",
+    donateDescription: "Your contribution empowers us to enhance LinguaLeap and help learners worldwide. Every donation makes a difference.",
+    donateNoteTitle: "Important Note",
+    donateNoteDescription: "This page is a UI demonstration for donation functionality. No actual payments are processed.",
+    donateAmountLabel: "Choose Your Donation Amount (USD)",
+    donateCustomAmount: "Custom",
+    donateCustomAmountLabel: "Enter Custom Amount (USD):",
+    donatePaymentMethodsTitle: "Supported Payment Methods",
+    donatePaymentMethodsDescription: "We aim to support a wide range of secure payment gateways. (Icons below are for visual representation)",
+    donateButton: "Donate Securely",
+    donateFooterText: "Your support helps us continue developing LinguaLeap and providing valuable language learning tools to everyone. Thank you!",
+    donateToastInvalidAmountTitle: "Invalid Amount",
+    donateToastInvalidAmountDescription: "Please enter a valid custom donation amount.",
+    donateToastThankYouTitle: "Thank You!",
+    donateToastThankYouDescription: ({ amount }) => `Your generous $${amount} donation is appreciated. (This is a placeholder action)`,
   },
   ar: {
     appName: "لينجوا ليب",
@@ -201,8 +423,8 @@ export const translations: Record<"en" | "ar", Translations> = {
     settingsReturnToHomeButton: "العودة إلى الرئيسية",
     toastSettingsSavedTitle: "تم حفظ الإعدادات!",
     toastSettingsSavedDescription: "تم تحديث تفضيلاتك.",
-    toastSettingsSavedDescriptionConceptual: (langLabel: string) => `ملاحظة: تغيير لغة عرض التطبيق إلى ${langLabel} هو حاليًا مفاهيمي ولن يغير لغة الواجهة بعد.`,
-    toastSettingsSavedDescriptionPremium: (langLabel: string) => `${langLabel} هي ميزة مميزة. يرجى الترقية لاستخدامها كلغة عرض. تم حفظ تفضيلك، لكن لغة الواجهة لن تتغير بعد.`,
+    toastSettingsSavedDescriptionConceptual: ({ langLabel }) => `ملاحظة: تغيير لغة عرض التطبيق إلى ${langLabel} هو حاليًا مفاهيمي ولن يغير لغة الواجهة بعد.`,
+    toastSettingsSavedDescriptionPremium: ({ langLabel }) => `${langLabel} هي ميزة مميزة. يرجى الترقية لاستخدامها كلغة عرض. تم حفظ تفضيلك، لكن لغة الواجهة لن تتغير بعد.`,
     loading: "جاري التحميل...",
     loginRequiredTitle: "تسجيل الدخول مطلوب",
     loginRequiredDescription: "يرجى تسجيل الدخول للوصول إلى هذه الصفحة.",
@@ -216,15 +438,15 @@ export const translations: Record<"en" | "ar", Translations> = {
     conversationsGeneratingButton: "جاري الإنشاء...",
     conversationsErrorSelectWords: "يرجى اختيار لغة وكلمتين على الأقل.",
     conversationsGeneratedTitle: "المحادثة التي تم إنشاؤها:",
-    conversationsAlertNoWords: (langLabel: string) => `لم تقم بتوليد أي كلمات باللغة ${langLabel} بعد.`,
+    conversationsAlertNoWords: ({ langLabel }) => `لم تقم بتوليد أي كلمات باللغة ${langLabel} بعد.`,
     conversationsAlertGoToWords: "قسم الكلمات",
     wordsTitle: "مجموعات تعلم الكلمات",
-    wordsGeneratingForLabel: (lang, field) => `جاري توليد كلمات لـ: ${lang} في ${field}.`,
+    wordsGeneratingForLabel: ({ lang, field }) => `جاري توليد كلمات لـ: ${lang} في ${field}.`,
     wordsChangePreferencesLink: "تغيير التفضيلات في الإعدادات",
     wordsPreviouslyGeneratedTitle: "المجموعات التي تم إنشاؤها سابقًا",
-    wordsAccordionTriggerLabel: (date, count) => `تم إنشاؤها ${date} (${count} عناصر)`,
-    wordsAlertNoHistory: (lang, field) => `لم يتم العثور على مجموعات كلمات تم إنشاؤها سابقًا لـ ${lang} - ${field}.`,
-    wordsGenerateNewSetButton: (count) => `إنشاء مجموعة جديدة من ${count} كلمات`,
+    wordsAccordionTriggerLabel: ({ date, count }) => `تم إنشاؤها ${date} (${count} عناصر)`,
+    wordsAlertNoHistory: ({ lang, field }) => `لم يتم العثور على مجموعات كلمات تم إنشاؤها سابقًا لـ ${lang} - ${field}.`,
+    wordsGenerateNewSetButton: ({ count }) => `إنشاء مجموعة جديدة من ${count} كلمات`,
     wordsGeneratingNewSetButton: "جاري إنشاء مجموعة جديدة...",
     wordsYourNewSetTitle: "مجموعتك التي تم إنشاؤها حديثًا:",
     wordsListenToWordButton: "استمع إلى الكلمة",
@@ -232,6 +454,113 @@ export const translations: Record<"en" | "ar", Translations> = {
     wordsSetPreferencesPromptTitle: "حدد تفضيلاتك",
     wordsSetPreferencesPromptDescription: "يرجى تحديد لغتك المستهدفة ومجال المعرفة المفضل في صفحة الإعدادات قبل إنشاء مجموعات الكلمات.",
     wordsGoToSettingsButton: "اذهب إلى الإعدادات",
+    // New Keys - Arabic
+    dashboardTitle: "لوحة تحكم التعلم",
+    dashboardStatTotalWords: "إجمالي الكلمات المكتسبة",
+    dashboardStatTotalWordsDesc: "كلمات فريدة من المجموعات التي تم إنشاؤها.",
+    dashboardStatLanguages: "اللغات المستكشفة",
+    dashboardStatLanguagesDesc: "لغات فريدة تم التدرب عليها.",
+    dashboardStatFields: "المجالات المستكشفة",
+    dashboardStatFieldsDesc: "مواضيع تمت تغطيتها في مجموعات الكلمات.",
+    dashboardStatSessions: "إجمالي الجلسات",
+    dashboardStatSessionsDesc: "مجموعات كلمات ومحادثات.",
+    dashboardOverviewTitle: "نظرة عامة على التعلم",
+    dashboardOverviewDescription: "ملخص سريع لمقاييس التعلم الخاصة بك.",
+    dashboardChartNoData: "لا توجد بيانات متاحة للرسم البياني.",
+    dashboardRecentActivityTitle: "النشاط الأخير",
+    dashboardRecentActivityDescription: "آخر جلساتك القليلة.",
+    dashboardRecentActivityEmpty: "لا يوجد نشاط حديث حتى الآن.",
+    dashboardStartLearningLink: "ابدأ التعلم!",
+    dashboardActivityJustNow: "الآن",
+    dashboardActivityWords: "كلمات",
+    dashboardActivityGenerated: ({ count, firstWord }) => `تم إنشاء ${count} مدخلات (${firstWord}...).`,
+    dashboardActivityConversation: ({ language }) => `محادثة باللغة ${language}`,
+    dashboardActivityConversationWords: ({ words }) => `الكلمات: ${words}.`,
+    dashboardDialogWordSetTitle: "تفاصيل مجموعة الكلمات",
+    dashboardDialogWordSetDesc: ({ field, language }) => `جلسة عن ${field} باللغة ${language}.`,
+    dashboardDialogLanguage: "اللغة:",
+    dashboardDialogField: "المجال:",
+    dashboardDialogEntries: "المدخلات:",
+    dashboardDialogDate: "التاريخ:",
+    dashboardDialogClose: "إغلاق",
+    dashboardDialogConversationTitle: "تفاصيل المحادثة",
+    dashboardDialogConversationDesc: ({ language }) => `ممارسة المحادثة باللغة ${language}.`,
+    dashboardDialogWordsUsed: "الكلمات المستخدمة:",
+    dashboardDialogConversation: "المحادثة:",
+    dashboardChartMetricWords: "كلمات",
+    dashboardChartMetricLanguages: "لغات",
+    dashboardChartMetricFields: "مجالات",
+    dashboardChartMetricSets: "مجموعات",
+    dashboardChartLabelCount: "العدد",
+    soundsTitle: ({ language }) => `الأصوات في ${language}`,
+    soundsDescription: ({ field }) => `تدرب على الأصوات لـ ${field}. انقر على أيقونات السماعة لسماع الكلمات/الجمل (ميزة قادمة قريبًا).`,
+    soundsLoadingPreferences: "جاري تحميل تفضيلاتك...",
+    soundsPracticeTipTitle: "نصيحة للممارسة",
+    soundsPracticeTipDescription: "استمع بعناية. حاول التكرار بصوت عالٍ. قم بإنشاء المزيد في قسم",
+    soundsNoWordsTitle: ({ langLabel, fieldLabel }) => `لا توجد كلمات بعد لـ ${langLabel} - ${fieldLabel}`,
+    soundsNoWordsDescription: "لم تقم بإنشاء أي كلمات لهذا المزيج من اللغة والمجال حتى الآن. اذهب إلى قسم",
+    exercisesListTitle: "التمارين المتاحة",
+    exercisesListDescription: "اختر تمرينًا من القائمة أدناه لبدء الممارسة.",
+    exerciseDetailLoading: "جاري تحميل التمرين...",
+    exerciseDetailLoginRequired: "يرجى تسجيل الدخول للوصول إلى التمارين.",
+    exerciseDetailSetPreferences: "يرجى تحديد لغتك ومجالك المستهدفين في الإعدادات لبدء تمرين.",
+    exerciseDetailLoadingWords: "جاري تحميل الكلمات...",
+    exerciseDetailNoWordsTitle: ({ langLabel, fieldLabel }) => `لا توجد كلمات متاحة لـ ${langLabel} - ${fieldLabel}`,
+    exerciseDetailNoWordsDescription: "لم تقم بإنشاء أي كلمات لهذا المزيج حتى الآن. يرجى الذهاب إلى قسم",
+    exerciseDetailQuestionProgress: ({ current, total }) => `سؤال ${current} من ${total}`,
+    exerciseDetailInteractiveUnderConstruction: "الجزء التفاعلي من هذا التمرين قيد الإنشاء. في الوقت الحالي، يمكنك التنقل بين كلماتك.",
+    exerciseDetailPreviousButton: "السابق",
+    exerciseDetailNextButton: "التالي",
+    exerciseDetailFinishButton: "إنهاء",
+    exerciseDetailCompleteTitle: "اكتمل التمرين!",
+    exerciseDetailCompleteDescription: "عمل رائع! لقد راجعت كل الكلمات.",
+    exerciseDetailStartOverButton: "البدء من جديد",
+    exerciseDetailStartButton: "بدء التمرين",
+    exerciseDetailResumeTitle: "استئناف التمرين؟",
+    exerciseDetailResumeDescription: "وجدنا تقدمًا محفوظًا لهذا التمرين. هل ترغب في المتابعة من حيث توقفت أم البدء من جديد؟",
+    exerciseDetailResumeButton: "استئناف",
+    exerciseDetailBackToListButton: "العودة إلى قائمة التمارين",
+    exerciseDetailTargetingLabel: "الاستهداف:",
+    examsListTitle: "امتحانات وتقييمات اللغة",
+    examsListDescription: "اختر امتحانًا من القائمة أدناه للتحضير واختبار مهاراتك.",
+    examDetailUnderConstructionTitle: "هذا الامتحان/التقييم قيد الإنشاء حاليًا.",
+    examDetailUnderConstructionDescription: "نحن نعمل بجد لنقدم لك هذا التقييم التفاعلي. يرجى التحقق مرة أخرى قريبًا!",
+    examDetailBackToListButton: "العودة إلى قائمة الامتحانات",
+    supportTitle: "احصل على الدعم",
+    supportDescription: "لديك أسئلة أو تحتاج إلى مساعدة؟ املأ النموذج أدناه وسيقوم فريقنا بالرد عليك في أقرب وقت ممكن.",
+    supportNoteTitle: "ملاحظة النظام",
+    supportNoteDescription: "هذا عرض لواجهة المستخدم لتقديم تذكرة دعم. لا يتم إنشاء أو إرسال تذاكر فعلية في هذا النموذج الأولي.",
+    supportSuccessTitle: "تم إرسال الطلب!",
+    supportSuccessDescription: "شكرًا لتواصلك معنا. لقد تلقينا طلبك (بشكل مفاهيمي) وسنعود إليك قريبًا.",
+    supportSubmitAnother: "إرسال طلب آخر؟",
+    supportEmailLabel: "بريدك الإلكتروني",
+    supportSubjectLabel: "الموضوع",
+    supportSubjectPlaceholder: "مثال: مشكلة في توليد الكلمات",
+    supportCategoryLabel: "الفئة",
+    supportCategoryPlaceholder: "اختر فئة...",
+    supportDescriptionLabel: "التفاصيل",
+    supportDescriptionPlaceholder: "يرجى وصف مشكلتك أو سؤالك بالتفصيل...",
+    supportSubmitButton: "إرسال طلب الدعم",
+    supportSendingButton: "جاري إرسال الطلب...",
+    supportFooterText: "للقضايا العاجلة، يرجى مراجعة قسم الأسئلة الشائعة (قريبًا) أو الاتصال بنا مباشرة إذا كان هذا النموذج غير متاح.",
+    supportToastSuccessTitle: "تم إرسال الطلب!",
+    supportToastSuccessDescription: "تم إرسال طلب الدعم الخاص بك بنجاح.",
+    supportToastErrorTitle: "فشل الإرسال",
+    donateTitle: "ادعم LinguaLeap",
+    donateDescription: "مساهمتك تمكننا من تحسين LinguaLeap ومساعدة المتعلمين في جميع أنحاء العالم. كل تبرع يحدث فرقًا.",
+    donateNoteTitle: "ملاحظة هامة",
+    donateNoteDescription: "هذه الصفحة هي عرض لواجهة المستخدم لوظيفة التبرع. لا تتم معالجة أي مدفوعات فعلية.",
+    donateAmountLabel: "اختر مبلغ التبرع (بالدولار الأمريكي)",
+    donateCustomAmount: "مخصص",
+    donateCustomAmountLabel: "أدخل المبلغ المخصص (بالدولار الأمريكي):",
+    donatePaymentMethodsTitle: "طرق الدفع المدعومة",
+    donatePaymentMethodsDescription: "نهدف إلى دعم مجموعة واسعة من بوابات الدفع الآمنة. (الأيقونات أدناه للعرض المرئي)",
+    donateButton: "تبرع بأمان",
+    donateFooterText: "دعمكم يساعدنا على مواصلة تطوير LinguaLeap وتوفير أدوات تعلم لغة قيمة للجميع. شكرًا لك!",
+    donateToastInvalidAmountTitle: "مبلغ غير صالح",
+    donateToastInvalidAmountDescription: "الرجاء إدخال مبلغ تبرع مخصص صالح.",
+    donateToastThankYouTitle: "شكرًا لك!",
+    donateToastThankYouDescription: ({ amount }) => `نقدر تبرعك السخي بمبلغ ${amount}$. (هذا إجراء نائب)`,
   },
 };
 

@@ -20,6 +20,7 @@ import { TARGET_LANGUAGES, TARGET_FIELDS } from "@/constants/data";
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
+import { useLocalization } from '@/hooks/useLocalization';
 
 interface DisplayableWordSoundEntry {
   word: string;
@@ -37,6 +38,7 @@ export default function SoundsPage() {
   const [isLoadingData, setIsLoadingData] = useState(false); // For data fetching after settings are loaded
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const { t } = useLocalization();
 
   // Load user settings
   useEffect(() => {
@@ -157,8 +159,8 @@ export default function SoundsPage() {
         <Card className="w-full max-w-3xl mx-auto shadow-xl">
           <CardHeader className="items-center text-center">
             <Mic className="w-16 h-16 text-primary mb-4" />
-            <CardTitle className="text-3xl font-bold text-primary">Sounds Practice</CardTitle>
-            <CardDescription className="text-lg mt-2">Loading your preferences...</CardDescription>
+            <CardTitle className="text-3xl font-bold text-primary">{t('navSounds')}</CardTitle>
+            <CardDescription className="text-lg mt-2">{t('soundsLoadingPreferences')}</CardDescription>
           </CardHeader>
           <CardContent className="text-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
@@ -174,12 +176,12 @@ export default function SoundsPage() {
         <Card className="w-full max-w-md mx-auto shadow-xl">
           <CardHeader className="items-center text-center">
             <Unlock className="w-12 h-12 text-primary mb-3" />
-            <CardTitle className="text-2xl font-bold text-primary">Login Required</CardTitle>
+            <CardTitle className="text-2xl font-bold text-primary">{t('loginRequiredTitle')}</CardTitle>
           </CardHeader>
           <CardContent className="text-center space-y-4">
-            <p className="text-muted-foreground">Please log in to practice with your learned words saved to your account.</p>
+            <p className="text-muted-foreground">{t('loginRequiredDescription')}</p>
             <Button asChild>
-              <Link href="/auth/login">Go to Login</Link>
+              <Link href="/auth/login">{t('goToLoginButton')}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -193,16 +195,14 @@ export default function SoundsPage() {
         <Card className="w-full max-w-lg mx-auto shadow-xl">
           <CardHeader className="items-center text-center">
             <SettingsIcon className="w-10 h-10 text-primary mb-3" />
-            <CardTitle className="text-2xl font-bold text-primary">Set Your Preferences</CardTitle>
+            <CardTitle className="text-2xl font-bold text-primary">{t('wordsSetPreferencesPromptTitle')}</CardTitle>
           </CardHeader>
           <CardContent className="text-center space-y-4">
             <p className="text-muted-foreground">
-              Please set your preferred target language and field of knowledge in the 
-              <Link href="/settings" className="text-primary underline hover:text-accent"> Settings page</Link> 
-              to practice sounds.
+              {t('wordsSetPreferencesPromptDescription')}
             </p>
             <Button asChild>
-              <Link href="/settings">Go to Settings</Link>
+              <Link href="/settings">{t('wordsGoToSettingsButton')}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -217,24 +217,23 @@ export default function SoundsPage() {
         <CardHeader className="items-center text-center">
           <Mic className="w-16 h-16 text-primary mb-4" />
           <CardTitle className="text-3xl font-bold text-primary">
-            Sounds in {targetLanguageLabel}
+            {t('soundsTitle', { language: targetLanguageLabel })}
           </CardTitle>
           <CardDescription className="text-lg mt-2">
-            Practice sounds for <strong className="text-primary">{targetFieldLabel}</strong>.
-            Click speaker icons to hear words/sentences (feature coming soon).
+            {t('soundsDescription', { field: targetFieldLabel })}
              <br />
             {currentUser && (
-                <Link href="/settings" className="text-sm underline text-primary hover:text-accent">Change language/field in settings</Link>
+                <Link href="/settings" className="text-sm underline text-primary hover:text-accent">{t('wordsChangePreferencesLink')}</Link>
             )}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {error && <Alert variant="destructive" className="mb-4"><AlertTriangle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+          {error && <Alert variant="destructive" className="mb-4"><AlertTriangle className="h-4 w-4" /><AlertTitle>{t('error')}</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
           
           {isLoadingData && (
             <div className="h-[400px] flex items-center justify-center">
                 <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                <p className="ml-3 text-muted-foreground">Loading sounds...</p>
+                <p className="ml-3 text-muted-foreground">{t('loading')}</p>
             </div>
           )}
 
@@ -242,9 +241,9 @@ export default function SoundsPage() {
             <>
               <Alert className="mb-6 bg-secondary/30">
                 <Info className="h-5 w-5 text-primary" />
-                <AlertTitle className="font-semibold text-primary">Practice Tip</AlertTitle>
+                <AlertTitle className="font-semibold text-primary">{t('soundsPracticeTipTitle')}</AlertTitle>
                 <AlertDescription className="text-muted-foreground">
-                  Listen carefully. Try to repeat aloud. Generate more in the <Link href="/words" className="underline hover:text-primary">Words section</Link>.
+                  {t('soundsPracticeTipDescription')} <Link href="/words" className="underline hover:text-primary">{t('navGenerateWords')}</Link>.
                 </AlertDescription>
               </Alert>
               <ScrollArea className="h-[400px] pr-3">
@@ -270,7 +269,7 @@ export default function SoundsPage() {
                         <div className="pl-3 border-l-2 border-accent/50 w-full space-y-1 pt-2 pb-1">
                           <p className="text-xs text-muted-foreground flex items-center gap-1">
                             <FileText className="w-3 h-3"/>
-                            Example sentence:
+                            {t('wordsExampleSentenceTitle')}
                           </p>
                           <div className="flex items-center justify-between w-full">
                             <p className="text-sm text-foreground flex-1 mr-2">{entry.sentence}</p>
@@ -296,17 +295,17 @@ export default function SoundsPage() {
           {!isLoadingData && displayableEntries.length === 0 && !error && (
              <Alert variant="default" className="bg-secondary/30">
                 <AlertTriangle className="h-4 w-4 text-primary" />
-                <AlertTitle>No Words Yet for {targetLanguageLabel} - {targetFieldLabel}</AlertTitle>
+                <AlertTitle>{t('soundsNoWordsTitle', { langLabel: targetLanguageLabel, fieldLabel: targetFieldLabel })}</AlertTitle>
                 <AlertDescription>
-                You haven't generated any words for this language and field combination yet. 
-                Go to the <Link href="/words" className="underline hover:text-primary font-medium">Words section</Link> to add some!
+                {t('soundsNoWordsDescription')}
+                <Link href="/words" className="underline hover:text-primary font-medium">{t('navGenerateWords')}</Link>!
                 </AlertDescription>
             </Alert>
           )}
 
           <div className="mt-8 text-center border-t pt-6">
             <Button asChild variant="outline">
-              <Link href="/">Return to Home</Link>
+              <Link href="/">{t('settingsReturnToHomeButton')}</Link>
             </Button>
           </div>
         </CardContent>
@@ -315,3 +314,4 @@ export default function SoundsPage() {
   );
 }
 
+    

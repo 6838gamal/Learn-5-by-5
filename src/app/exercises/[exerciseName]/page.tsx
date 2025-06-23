@@ -35,6 +35,7 @@ import { getTargetLanguageSettingAction, getTargetFieldSettingAction } from '@/a
 import { fetchUserActivitiesAction } from '@/app/actions';
 import type { WordEntry, WordSetActivityRecord } from '@/lib/activityStore';
 import { TARGET_LANGUAGES, TARGET_FIELDS } from '@/constants/data';
+import { useLocalization } from '@/hooks/useLocalization';
 
 // Helper function to convert slug to title
 function slugToTitle(slug: string): string {
@@ -51,6 +52,7 @@ export default function ExerciseDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useLocalization();
 
   const exerciseNameSlug = typeof params.exerciseName === 'string' ? params.exerciseName : '';
   const exerciseTitle = slugToTitle(exerciseNameSlug);
@@ -185,7 +187,7 @@ export default function ExerciseDetailPage() {
   if (!isClient || isSettingsLoading) {
     return (
       <div className="container mx-auto py-8 px-4 flex justify-center">
-        <Card className="w-full max-w-xl shadow-xl"><CardHeader className="items-center"><Loader2 className="w-12 h-12 text-primary animate-spin" /></CardHeader><CardContent><p className="text-center text-muted-foreground">Loading Exercise...</p></CardContent></Card>
+        <Card className="w-full max-w-xl shadow-xl"><CardHeader className="items-center"><Loader2 className="w-12 h-12 text-primary animate-spin" /></CardHeader><CardContent><p className="text-center text-muted-foreground">{t('exerciseDetailLoading')}</p></CardContent></Card>
       </div>
     );
   }
@@ -193,7 +195,7 @@ export default function ExerciseDetailPage() {
   if (!currentUser && auth.app.options.apiKey !== "YOUR_API_KEY_HERE") {
      return (
       <div className="container mx-auto py-8 px-4">
-        <Card className="w-full max-w-md mx-auto shadow-xl"><CardHeader className="items-center text-center"><Unlock className="w-12 h-12 text-primary mb-3" /><CardTitle className="text-2xl font-bold text-primary">Login Required</CardTitle></CardHeader><CardContent className="text-center space-y-4"><p className="text-muted-foreground">Please log in to access exercises.</p><Button asChild><Link href="/auth/login">Go to Login</Link></Button></CardContent></Card>
+        <Card className="w-full max-w-md mx-auto shadow-xl"><CardHeader className="items-center text-center"><Unlock className="w-12 h-12 text-primary mb-3" /><CardTitle className="text-2xl font-bold text-primary">{t('loginRequiredTitle')}</CardTitle></CardHeader><CardContent className="text-center space-y-4"><p className="text-muted-foreground">{t('exerciseDetailLoginRequired')}</p><Button asChild><Link href="/auth/login">{t('goToLoginButton')}</Link></Button></CardContent></Card>
       </div>
     );
   }
@@ -201,14 +203,14 @@ export default function ExerciseDetailPage() {
   if (!isSettingsLoading && (!settingsTargetLanguage || !settingsTargetField)) {
      return (
       <div className="container mx-auto py-8 px-4">
-        <Card className="w-full max-w-lg mx-auto shadow-xl"><CardHeader className="items-center text-center"><SettingsIcon className="w-10 h-10 text-primary mb-3" /><CardTitle className="text-2xl font-bold text-primary">Set Your Preferences</CardTitle></CardHeader><CardContent className="text-center space-y-4"><p className="text-muted-foreground">Please set your target language and field in <Link href="/settings" className="text-primary underline hover:text-accent">Settings</Link> to begin an exercise.</p><Button asChild><Link href="/settings">Go to Settings</Link></Button></CardContent></Card>
+        <Card className="w-full max-w-lg mx-auto shadow-xl"><CardHeader className="items-center text-center"><SettingsIcon className="w-10 h-10 text-primary mb-3" /><CardTitle className="text-2xl font-bold text-primary">{t('wordsSetPreferencesPromptTitle')}</CardTitle></CardHeader><CardContent className="text-center space-y-4"><p className="text-muted-foreground">{t('exerciseDetailSetPreferences')}</p><Button asChild><Link href="/settings">{t('wordsGoToSettingsButton')}</Link></Button></CardContent></Card>
       </div>
     );
   }
 
   const renderExerciseContent = () => {
     if (isDataLoading) {
-        return <div className="text-center"><Loader2 className="w-8 h-8 text-primary animate-spin mx-auto" /><p className="mt-2 text-muted-foreground">Loading words...</p></div>;
+        return <div className="text-center"><Loader2 className="w-8 h-8 text-primary animate-spin mx-auto" /><p className="mt-2 text-muted-foreground">{t('exerciseDetailLoadingWords')}</p></div>;
     }
     
     if (words.length === 0 && !isDataLoading) {
@@ -217,9 +219,9 @@ export default function ExerciseDetailPage() {
         return (
             <Alert variant="default" className="bg-secondary/30">
                 <AlertTriangle className="h-4 w-4 text-primary" />
-                <AlertTitle>No Words Available for {langLabel} - {fieldLabel}</AlertTitle>
+                <AlertTitle>{t('exerciseDetailNoWordsTitle', { langLabel, fieldLabel })}</AlertTitle>
                 <AlertDescription>
-                    You have not generated any words for this combination yet. Please go to the <Link href="/words" className="underline hover:text-primary font-medium">Words section</Link> to generate a new set.
+                   {t('exerciseDetailNoWordsDescription')} <Link href="/words" className="underline hover:text-primary font-medium">{t('navGenerateWords')}</Link>.
                 </AlertDescription>
             </Alert>
         );
@@ -229,7 +231,7 @@ export default function ExerciseDetailPage() {
         const currentWord = words[currentIndex];
         return (
             <div className="text-center space-y-6">
-                <p className="text-sm text-muted-foreground">Question {currentIndex + 1} of {words.length}</p>
+                <p className="text-sm text-muted-foreground">{t('exerciseDetailQuestionProgress', { current: currentIndex + 1, total: words.length })}</p>
                 <div className="p-8 border rounded-lg bg-card-foreground/5 min-h-[150px] flex flex-col justify-center">
                     <p className="text-3xl font-bold text-primary">{currentWord?.word}</p>
                     <p className="text-base text-muted-foreground mt-2">{currentWord?.sentence}</p>
@@ -237,11 +239,11 @@ export default function ExerciseDetailPage() {
                 
                 <div className="p-4 border rounded-lg bg-muted/20">
                     <Construction className="w-8 h-8 text-amber-500 mx-auto mb-2"/>
-                    <p className="text-muted-foreground text-sm">The interactive part of this exercise is under construction. For now, you can navigate through your words.</p>
+                    <p className="text-muted-foreground text-sm">{t('exerciseDetailInteractiveUnderConstruction')}</p>
                 </div>
 
                 <div className="flex justify-between items-center">
-                    <Button onClick={() => setCurrentIndex(p => Math.max(0, p - 1))} disabled={currentIndex === 0}>Previous</Button>
+                    <Button onClick={() => setCurrentIndex(p => Math.max(0, p - 1))} disabled={currentIndex === 0}>{t('exerciseDetailPreviousButton')}</Button>
                     <Button onClick={() => {
                         if (currentIndex === words.length - 1) {
                             setExerciseStatus("complete");
@@ -249,7 +251,7 @@ export default function ExerciseDetailPage() {
                             setCurrentIndex(p => p + 1)
                         }
                     }}>
-                        {currentIndex === words.length - 1 ? 'Finish' : 'Next'}
+                        {currentIndex === words.length - 1 ? t('exerciseDetailFinishButton') : t('exerciseDetailNextButton')}
                     </Button>
                 </div>
             </div>
@@ -259,10 +261,10 @@ export default function ExerciseDetailPage() {
     if (exerciseStatus === 'complete') {
         return (
             <div className="text-center space-y-4">
-                <h3 className="text-xl font-semibold text-primary">Exercise Complete!</h3>
-                <p className="text-muted-foreground">Great job! You've reviewed all the words.</p>
+                <h3 className="text-xl font-semibold text-primary">{t('exerciseDetailCompleteTitle')}</h3>
+                <p className="text-muted-foreground">{t('exerciseDetailCompleteDescription')}</p>
                 <Button onClick={() => startExercise(true)}>
-                    <RotateCcw className="mr-2 h-4 w-4"/> Start Over
+                    <RotateCcw className="mr-2 h-4 w-4"/> {t('exerciseDetailStartOverButton')}
                 </Button>
             </div>
         );
@@ -272,7 +274,7 @@ export default function ExerciseDetailPage() {
       return (
         <div className="text-center">
             <Button onClick={() => startExercise(true)} size="lg">
-                <Play className="mr-2 h-5 w-5"/> Start Exercise
+                <Play className="mr-2 h-5 w-5"/> {t('exerciseDetailStartButton')}
             </Button>
         </div>
       );
@@ -291,7 +293,7 @@ export default function ExerciseDetailPage() {
           </CardTitle>
           {settingsTargetLanguage && settingsTargetField && 
             <CardDescription className="text-lg mt-2">
-                Targeting: <span className="font-semibold text-primary">{TARGET_LANGUAGES.find(l => l.value === settingsTargetLanguage)?.label || settingsTargetLanguage}</span> - <span className="font-semibold text-primary">{TARGET_FIELDS.find(f => f.value === settingsTargetField)?.label || settingsTargetField}</span>
+                {t('exerciseDetailTargetingLabel')} <span className="font-semibold text-primary">{TARGET_LANGUAGES.find(l => l.value === settingsTargetLanguage)?.label || settingsTargetLanguage}</span> - <span className="font-semibold text-primary">{TARGET_FIELDS.find(f => f.value === settingsTargetField)?.label || settingsTargetField}</span>
             </CardDescription>
           }
         </CardHeader>
@@ -302,17 +304,17 @@ export default function ExerciseDetailPage() {
              <AlertDialog open={showResumeDialog} onOpenChange={setShowResumeDialog}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                    <AlertDialogTitle>Resume Exercise?</AlertDialogTitle>
+                    <AlertDialogTitle>{t('exerciseDetailResumeTitle')}</AlertDialogTitle>
                     <AlertDialogDescription>
-                        We found saved progress for this exercise. Would you like to continue where you left off or start over?
+                        {t('exerciseDetailResumeDescription')}
                     </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                     <AlertDialogCancel onClick={() => startExercise(true)}>
-                        <RotateCcw className="mr-2 h-4 w-4"/> Start Over
+                        <RotateCcw className="mr-2 h-4 w-4"/> {t('exerciseDetailStartOverButton')}
                     </AlertDialogCancel>
                     <AlertDialogAction onClick={() => startExercise(false)}>
-                        <Play className="mr-2 h-4 w-4"/> Resume
+                        <Play className="mr-2 h-4 w-4"/> {t('exerciseDetailResumeButton')}
                     </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
@@ -320,11 +322,11 @@ export default function ExerciseDetailPage() {
             
           <div className="flex flex-col sm:flex-row justify-center gap-4 mt-8 border-t pt-6">
             <Button onClick={() => router.push('/exercises')} variant="outline" className="flex items-center gap-2">
-              <ChevronLeft className="w-4 h-4" /> Back to Exercises List
+              <ChevronLeft className="w-4 h-4" /> {t('exerciseDetailBackToListButton')}
             </Button>
             <Button asChild className="flex items-center gap-2">
               <Link href="/">
-                <Home className="w-4 h-4" /> Return to Home
+                <Home className="w-4 h-4" /> {t('settingsReturnToHomeButton')}
               </Link>
             </Button>
           </div>
@@ -333,3 +335,5 @@ export default function ExerciseDetailPage() {
     </div>
   );
 }
+
+    

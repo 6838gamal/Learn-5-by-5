@@ -7,6 +7,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Construction, ChevronLeft, Home, Award } from "lucide-react";
+import { useLocalization } from '@/hooks/useLocalization';
 
 // Helper function to convert slug to title
 function slugToTitle(slug: string): string {
@@ -20,6 +21,7 @@ function slugToTitle(slug: string): string {
 export default function ExamDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { t } = useLocalization();
   const examNameSlug = typeof params.examName === 'string' ? params.examName : '';
   const examTitle = slugToTitle(examNameSlug);
 
@@ -32,20 +34,20 @@ export default function ExamDetailPage() {
             {examTitle}
           </CardTitle>
           <CardDescription className="text-lg mt-2">
-            This exam/assessment is currently under construction.
+            {t('examDetailUnderConstructionTitle')}
           </CardDescription>
         </CardHeader>
         <CardContent className="text-center space-y-6">
           <p className="text-muted-foreground">
-            We're working hard to bring you this interactive assessment. Please check back soon!
+            {t('examDetailUnderConstructionDescription')}
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Button onClick={() => router.back()} variant="outline" className="flex items-center gap-2">
-              <ChevronLeft className="w-4 h-4" /> Back to Exams List
+              <ChevronLeft className="w-4 h-4" /> {t('examDetailBackToListButton')}
             </Button>
             <Button asChild className="flex items-center gap-2">
               <Link href="/">
-                <Home className="w-4 h-4" /> Return to Home
+                <Home className="w-4 h-4" /> {t('settingsReturnToHomeButton')}
               </Link>
             </Button>
           </div>
@@ -54,3 +56,5 @@ export default function ExamDetailPage() {
     </div>
   );
 }
+
+    

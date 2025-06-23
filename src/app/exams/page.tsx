@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Award, ChevronRight, Home } from "lucide-react"; // Changed icon to Award
+import { Award, ChevronRight, Home } from "lucide-react";
+import { useLocalization } from '@/hooks/useLocalization';
 
 const examList = [
   { name: "Vocabulary Test", slug: "vocabulary-test" },
@@ -42,16 +43,18 @@ const examList = [
 ];
 
 export default function ExamsPage() {
+  const { t } = useLocalization();
+
   return (
     <div className="container mx-auto py-8 px-4">
       <Card className="w-full max-w-2xl mx-auto shadow-xl">
         <CardHeader className="items-center text-center">
           <Award className="w-16 h-16 text-primary mb-4" />
           <CardTitle className="text-3xl font-bold text-primary">
-            Language Exams & Assessments
+            {t('examsListTitle')}
           </CardTitle>
           <CardDescription className="text-lg mt-2">
-            Select an exam from the list below to prepare and test your skills.
+            {t('examsListDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -72,7 +75,7 @@ export default function ExamsPage() {
            <div className="mt-8 text-center border-t pt-6">
             <Button asChild variant="outline">
               <Link href="/" className="flex items-center gap-2">
-                <Home className="w-4 h-4" /> Return to Home
+                <Home className="w-4 h-4" /> {t('settingsReturnToHomeButton')}
               </Link>
             </Button>
           </div>
@@ -81,3 +84,5 @@ export default function ExamsPage() {
     </div>
   );
 }
+
+    

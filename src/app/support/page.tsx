@@ -19,6 +19,7 @@ import { SUPPORT_CATEGORIES } from '@/constants/data';
 import { handleSupportRequest, type HandleSupportRequestResult, type SupportRequestInput } from '@/app/actions';
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
+import { useLocalization } from '@/hooks/useLocalization';
 
 const supportFormSchema = z.object({
   email: z.string().email("Invalid email address.").min(1, "Email is required."),
@@ -35,6 +36,7 @@ export default function SupportPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const { toast } = useToast();
+  const { t } = useLocalization();
 
   const form = useForm<SupportFormValues>({
     resolver: zodResolver(supportFormSchema),
@@ -71,8 +73,8 @@ export default function SupportPage() {
 
     if (result.success && result.message) {
       toast({
-        title: "Request Submitted!",
-        description: result.message,
+        title: t('supportToastSuccessTitle'),
+        description: t('supportToastSuccessDescription'),
       });
       setFormSubmittedSuccessfully(true);
       form.reset();
@@ -86,7 +88,7 @@ export default function SupportPage() {
       }
       toast({
         variant: "destructive",
-        title: "Submission Failed",
+        title: t('supportToastErrorTitle'),
         description: description,
       });
     }
@@ -98,39 +100,16 @@ export default function SupportPage() {
         <Card className="w-full max-w-2xl shadow-xl">
           <CardHeader className="items-center text-center">
             <LifeBuoy className="w-12 h-12 text-primary mb-3" />
-            <CardTitle className="text-3xl font-bold text-primary">Support Center</CardTitle>
+            <CardTitle className="text-3xl font-bold text-primary">{t('navSupport')}</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-            <p className="mt-4 text-muted-foreground">Loading contact form...</p>
+            <p className="mt-4 text-muted-foreground">{t('loading')}</p>
           </CardContent>
         </Card>
       </div>
     );
   }
-  
-  // Optional: If strict login is required to submit a support ticket
-  /*
-  if (!currentUser && !isAuthLoading) {
-     return (
-      <div className="container mx-auto py-8 px-4">
-        <Card className="w-full max-w-md mx-auto shadow-xl">
-          <CardHeader className="items-center text-center">
-            <Unlock className="w-12 h-12 text-primary mb-3" />
-            <CardTitle className="text-2xl font-bold text-primary">Login Required</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <p className="text-muted-foreground">Please log in to submit a support request.</p>
-            <Button asChild>
-              <Link href="/auth/login">Go to Login</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-  */
-
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -138,29 +117,29 @@ export default function SupportPage() {
         <CardHeader className="items-center text-center bg-gradient-to-br from-primary to-primary/80 p-8">
           <LifeBuoy className="w-20 h-20 text-primary-foreground mb-4 drop-shadow-lg" />
           <CardTitle className="text-4xl font-bold text-primary-foreground drop-shadow-md">
-            Get Support
+            {t('supportTitle')}
           </CardTitle>
           <CardDescription className="text-lg mt-2 text-primary-foreground/90 max-w-md mx-auto">
-            Have questions or need help? Fill out the form below and our team will get back to you as soon as possible.
+            {t('supportDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent className="p-6 sm:p-8 space-y-8 bg-background">
           <Alert variant="default" className="bg-amber-50 border-amber-400 text-amber-700">
             <AlertTriangle className="h-5 w-5 text-amber-500" />
-            <AlertTitle className="font-semibold">System Note</AlertTitle>
+            <AlertTitle className="font-semibold">{t('supportNoteTitle')}</AlertTitle>
             <AlertDescription>
-              This is a UI demonstration for a support ticket submission. No actual tickets are created or sent in this prototype.
+              {t('supportNoteDescription')}
             </AlertDescription>
           </Alert>
 
           {formSubmittedSuccessfully ? (
             <Alert variant="default" className="bg-green-50 border-green-300 text-green-700">
               <CheckCircle className="h-5 w-5 text-green-600" />
-              <AlertTitle className="font-semibold">Request Submitted!</AlertTitle>
+              <AlertTitle className="font-semibold">{t('supportSuccessTitle')}</AlertTitle>
               <AlertDescription>
-                Thank you for contacting us. We've received your request (conceptually) and will get back to you soon.
+                {t('supportSuccessDescription')}
                 <Button variant="link" onClick={() => setFormSubmittedSuccessfully(false)} className="text-green-700 pl-1">
-                    Submit another request?
+                    {t('supportSubmitAnother')}
                 </Button>
               </AlertDescription>
             </Alert>
@@ -172,7 +151,7 @@ export default function SupportPage() {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2"><Mail className="w-4 h-4 text-muted-foreground" />Your Email Address</FormLabel>
+                      <FormLabel className="flex items-center gap-2"><Mail className="w-4 h-4 text-muted-foreground" />{t('supportEmailLabel')}</FormLabel>
                       <FormControl>
                         <Input type="email" placeholder="you@example.com" {...field} disabled={isLoading || (!!currentUser && !!currentUser.email)} />
                       </FormControl>
@@ -185,9 +164,9 @@ export default function SupportPage() {
                   name="subject"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2"><Type className="w-4 h-4 text-muted-foreground" />Subject</FormLabel>
+                      <FormLabel className="flex items-center gap-2"><Type className="w-4 h-4 text-muted-foreground" />{t('supportSubjectLabel')}</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Issue with word generation" {...field} disabled={isLoading} />
+                        <Input placeholder={t('supportSubjectPlaceholder')} {...field} disabled={isLoading} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -198,11 +177,11 @@ export default function SupportPage() {
                   name="category"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2"><ListFilter className="w-4 h-4 text-muted-foreground" />Category</FormLabel>
+                      <FormLabel className="flex items-center gap-2"><ListFilter className="w-4 h-4 text-muted-foreground" />{t('supportCategoryLabel')}</FormLabel>
                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a category..." />
+                            <SelectValue placeholder={t('supportCategoryPlaceholder')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -222,10 +201,10 @@ export default function SupportPage() {
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2"><Type className="w-4 h-4 text-muted-foreground" />Details</FormLabel>
+                      <FormLabel className="flex items-center gap-2"><Type className="w-4 h-4 text-muted-foreground" />{t('supportDescriptionLabel')}</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Please describe your issue or question in detail..."
+                          placeholder={t('supportDescriptionPlaceholder')}
                           className="min-h-[150px] text-base"
                           {...field}
                           disabled={isLoading}
@@ -243,11 +222,11 @@ export default function SupportPage() {
                 >
                   {isLoading ? (
                      <>
-                        <Loader2 className="mr-2.5 h-6 w-6 animate-spin" /> Sending Request...
+                        <Loader2 className="mr-2.5 h-6 w-6 animate-spin" /> {t('supportSendingButton')}
                      </>
                   ) : (
                      <>
-                        <Send className="mr-2.5 h-6 w-6" /> Submit Support Request
+                        <Send className="mr-2.5 h-6 w-6" /> {t('supportSubmitButton')}
                      </>
                   )}
                 </Button>
@@ -257,11 +236,11 @@ export default function SupportPage() {
         </CardContent>
         <CardFooter className="flex flex-col items-center p-6 bg-muted/30 border-t">
           <p className="text-sm text-muted-foreground mb-4 text-center max-w-sm">
-            For urgent issues, please check our FAQ section (coming soon) or contact us directly if this form is unavailable.
+            {t('supportFooterText')}
           </p>
           <Button asChild variant="outline" size="lg">
             <Link href="/" className="flex items-center gap-2">
-              <Home className="w-5 h-5" /> Return to Home
+              <Home className="w-5 h-5" /> {t('settingsReturnToHomeButton')}
             </Link>
           </Button>
         </CardFooter>
@@ -269,3 +248,5 @@ export default function SupportPage() {
     </div>
   );
 }
+
+    
