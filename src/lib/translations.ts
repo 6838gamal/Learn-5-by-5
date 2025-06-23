@@ -81,6 +81,22 @@ export interface Translations {
   wordsSetPreferencesPromptTitle: string;
   wordsSetPreferencesPromptDescription: string;
   wordsGoToSettingsButton: string;
+  wordsLoadingPreferences: string;
+  wordsLoginRequiredDescription: string;
+  wordsAlertNoHistoryTitle: string;
+  wordsToastSuccessTitle: string;
+  wordsToastSuccessDescription: (replacements: { count: number, field: string, lang: string }) => string;
+  wordsToastLoggingFailedTitle: string;
+  wordsToastLoggingFailedDescription: string;
+  wordsToastLocalSaveTitle: string;
+  wordsToastLocalSaveDescription: string;
+  wordsToastGenerationFailedTitle: string;
+  wordsToastLoginRequired: string;
+  wordsToastSettingsIncompleteTitle: string;
+  wordsToastSettingsIncompleteDescription: string;
+  wordsSetPreferencesPromptDescriptionPart1: string;
+  wordsSetPreferencesPromptLinkText: string;
+  wordsSetPreferencesPromptDescriptionPart2: string;
 
   // New keys for full localization
   dashboardTitle: string;
@@ -272,6 +288,22 @@ export const translations: Record<"en" | "ar", Translations> = {
     wordsSetPreferencesPromptTitle: "Set Your Preferences",
     wordsSetPreferencesPromptDescription: "Please set your preferred target language and field of knowledge in the Settings page before generating word sets.",
     wordsGoToSettingsButton: "Go to Settings",
+    wordsLoadingPreferences: "Loading your preferences...",
+    wordsLoginRequiredDescription: "Please log in to generate words and save your progress to your account.",
+    wordsAlertNoHistoryTitle: "No History Yet",
+    wordsToastSuccessTitle: "New Word Set Generated!",
+    wordsToastSuccessDescription: ({ count, field, lang }) => `A new set of ${count} items for ${field} in ${lang} is ready.`,
+    wordsToastLoggingFailedTitle: "Logging Failed",
+    wordsToastLoggingFailedDescription: "Could not save activity to your account.",
+    wordsToastLocalSaveTitle: "Activity Processed Locally",
+    wordsToastLocalSaveDescription: "Log in to save progress permanently.",
+    wordsToastGenerationFailedTitle: "Generation Failed",
+    wordsToastLoginRequired: "Please log in to generate and save words.",
+    wordsToastSettingsIncompleteTitle: "Settings Incomplete",
+    wordsToastSettingsIncompleteDescription: "Please set your target language and field in Settings first.",
+    wordsSetPreferencesPromptDescriptionPart1: "Please set your preferred target language and field of knowledge in the",
+    wordsSetPreferencesPromptLinkText: "Settings page",
+    wordsSetPreferencesPromptDescriptionPart2: "before generating word sets.",
     // New Keys
     dashboardTitle: "Learning Dashboard",
     dashboardStatTotalWords: "Total Words Learned",
@@ -454,6 +486,22 @@ export const translations: Record<"en" | "ar", Translations> = {
     wordsSetPreferencesPromptTitle: "حدد تفضيلاتك",
     wordsSetPreferencesPromptDescription: "يرجى تحديد لغتك المستهدفة ومجال المعرفة المفضل في صفحة الإعدادات قبل إنشاء مجموعات الكلمات.",
     wordsGoToSettingsButton: "اذهب إلى الإعدادات",
+    wordsLoadingPreferences: "جاري تحميل تفضيلاتك...",
+    wordsLoginRequiredDescription: "يرجى تسجيل الدخول لتوليد الكلمات وحفظ تقدمك في حسابك.",
+    wordsAlertNoHistoryTitle: "لا يوجد سجل حتى الآن",
+    wordsToastSuccessTitle: "تم إنشاء مجموعة كلمات جديدة!",
+    wordsToastSuccessDescription: ({ count, field, lang }) => `مجموعة جديدة من ${count} عناصر لـ ${field} في ${lang} جاهزة.`,
+    wordsToastLoggingFailedTitle: "فشل التسجيل",
+    wordsToastLoggingFailedDescription: "لم نتمكن من حفظ النشاط في حسابك.",
+    wordsToastLocalSaveTitle: "تمت معالجة النشاط محليًا",
+    wordsToastLocalSaveDescription: "سجل الدخول لحفظ التقدم بشكل دائم.",
+    wordsToastGenerationFailedTitle: "فشل التوليد",
+    wordsToastLoginRequired: "يرجى تسجيل الدخول لتوليد وحفظ الكلمات.",
+    wordsToastSettingsIncompleteTitle: "الإعدادات غير مكتملة",
+    wordsToastSettingsIncompleteDescription: "يرجى تعيين لغتك ومجالك المستهدفين في الإعدادات أولاً.",
+    wordsSetPreferencesPromptDescriptionPart1: "يرجى تعيين لغتك المستهدفة ومجال المعرفة المفضل في",
+    wordsSetPreferencesPromptLinkText: "صفحة الإعدادات",
+    wordsSetPreferencesPromptDescriptionPart2: "قبل إنشاء مجموعات الكلمات.",
     // New Keys - Arabic
     dashboardTitle: "لوحة تحكم التعلم",
     dashboardStatTotalWords: "إجمالي الكلمات المكتسبة",

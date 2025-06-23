@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TARGET_LANGUAGES, TARGET_FIELDS, SelectionOption } from "@/constants/data"; // Using TARGET_ constants
+import { TARGET_LANGUAGES, TARGET_FIELDS } from "@/constants/data"; 
 import { 
   handleGenerateWordSet, 
   type GenerateWordSetActionResult,
@@ -52,6 +52,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { useLocalization } from "@/hooks/useLocalization"; // Import the hook
 
 export default function LearnClientPage() {
   const [generatedWordEntries, setGeneratedWordEntries] = useState<WordEntry[]>([]);
@@ -61,6 +62,7 @@ export default function LearnClientPage() {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const router = useRouter();
+  const { t } = useLocalization(); // Use the localization hook
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   const [carouselApi, setCarouselApi] = React.useState<CarouselApi>()
@@ -90,7 +92,7 @@ export default function LearnClientPage() {
           setSettingsTargetField(targetFld);
         } catch (e) {
           console.error("Failed to load user settings:", e);
-          toast({ variant: "destructive", title: "Could not load settings", description: "Using default values." });
+          toast({ variant: "destructive", title: t('error'), description: "Could not load settings" });
           setCurrentWordsToGenerate(5); // Default fallback
         }
       } else {
@@ -102,7 +104,7 @@ export default function LearnClientPage() {
       setIsSettingsLoading(false);
     });
     return () => unsubscribe();
-  }, [toast]);
+  }, [toast, t]);
 
   // Effect to load previous word sets (history) based on loaded settings
   useEffect(() => {
@@ -128,12 +130,9 @@ export default function LearnClientPage() {
             )
             .sort((a, b) => b.timestamp - a.timestamp);
         } else if (result.error) {
-          setError("Could not load previous word sets: " + result.error);
+          setError(t('error') + ": " + result.error);
         }
-      } else if (auth.app.options.apiKey === "YOUR_API_KEY_HERE") { 
-        // Local storage for test mode (not fully implemented here as primary focus is Firestore)
-        console.log("Using local storage for history (test mode) - Not fully implemented for this component with settings dependency.");
-      }
+      } 
       setPreviousWordSets(fetchedSets);
       setIsHistoryLoading(false);
     };
@@ -144,7 +143,7 @@ export default function LearnClientPage() {
       setPreviousWordSets([]); // Clear history for logged-out users
       setIsHistoryLoading(false);
     }
-  }, [currentUser, settingsTargetLanguage, settingsTargetField, isSettingsLoading]);
+  }, [currentUser, settingsTargetLanguage, settingsTargetField, isSettingsLoading, t]);
 
 
   useEffect(() => {
@@ -183,11 +182,11 @@ export default function LearnClientPage() {
 
   const onGenerateNewSet = async () => {
     if (!currentUser && auth.app.options.apiKey !== "YOUR_API_KEY_HERE") {
-       toast({ variant: "destructive", title: "Login Required", description: "Please log in to generate and save words." });
+       toast({ variant: "destructive", title: t('loginRequiredTitle'), description: t('wordsToastLoginRequired') });
        return;
     }
     if (!settingsTargetLanguage || !settingsTargetField) {
-      toast({ variant: "destructive", title: "Settings Incomplete", description: "Please set your target language and field in Settings first." });
+      toast({ variant: "destructive", title: t('wordsToastSettingsIncompleteTitle'), description: t('wordsToastSettingsIncompleteDescription') });
       return;
     }
 
@@ -211,9 +210,12 @@ export default function LearnClientPage() {
       setGeneratedWordEntries(result.wordEntries);
       if (result.wordEntries.length > 0) setSelectedWordEntry(result.wordEntries[0]); 
       
+      const fieldLabel = TARGET_FIELDS.find(f => f.value === result.field)?.label || result.field;
+      const langLabel = TARGET_LANGUAGES.find(l => l.value === result.language)?.label || result.language;
+
       toast({
-        title: "New Word Set Generated!",
-        description: `A new set of ${result.wordEntries.length} items for ${TARGET_FIELDS.find(f => f.value === result.field)?.label || result.field} in ${TARGET_LANGUAGES.find(l => l.value === result.language)?.label || result.language} is ready.`,
+        title: t('wordsToastSuccessTitle'),
+        description: t('wordsToastSuccessDescription', { count: result.wordEntries.length, field: fieldLabel, lang: langLabel }),
       });
 
       const newActivityRecord: WordSetActivityRecord = {
@@ -235,16 +237,16 @@ export default function LearnClientPage() {
           wordEntries: result.wordEntries,
         });
         if (!logResult.success) {
-          toast({ variant: "destructive", title: "Logging Failed", description: "Could not save activity to your account." });
+          toast({ variant: "destructive", title: t('wordsToastLoggingFailedTitle'), description: t('wordsToastLoggingFailedDescription') });
         }
       } else {
-        toast({ title: "Activity Processed Locally", description: "Log in to save progress permanently."});
+        toast({ title: t('wordsToastLocalSaveTitle'), description: t('wordsToastLocalSaveDescription')});
       }
     } else if (result.error) {
       setError(result.error);
       toast({
         variant: "destructive",
-        title: "Generation Failed",
+        title: t('wordsToastGenerationFailedTitle'),
         description: result.error,
       });
     }
@@ -271,11 +273,11 @@ export default function LearnClientPage() {
         <Card className="w-full max-w-2xl mx-auto shadow-xl">
           <CardHeader className="items-center text-center">
             <BookOpenText className="w-10 h-10 text-primary mb-3" />
-            <CardTitle className="text-3xl font-bold text-primary">Generate Word Sets</CardTitle>
+            <CardTitle className="text-3xl font-bold text-primary">{t('wordsTitle')}</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-            <p className="mt-4 text-muted-foreground">Loading your preferences...</p>
+            <p className="mt-4 text-muted-foreground">{t('wordsLoadingPreferences')}</p>
           </CardContent>
         </Card>
       </div>
@@ -288,12 +290,12 @@ export default function LearnClientPage() {
         <Card className="w-full max-w-md mx-auto shadow-xl">
           <CardHeader className="items-center text-center">
             <Unlock className="w-12 h-12 text-primary mb-3" />
-            <CardTitle className="text-2xl font-bold text-primary">Login Required</CardTitle>
+            <CardTitle className="text-2xl font-bold text-primary">{t('loginRequiredTitle')}</CardTitle>
           </CardHeader>
           <CardContent className="text-center space-y-4">
-            <p className="text-muted-foreground">Please log in to generate words and save your progress to your account.</p>
+            <p className="text-muted-foreground">{t('wordsLoginRequiredDescription')}</p>
             <Button asChild>
-              <Link href="/auth/login">Go to Login</Link>
+              <Link href="/auth/login">{t('goToLoginButton')}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -307,16 +309,18 @@ export default function LearnClientPage() {
         <Card className="w-full max-w-lg mx-auto shadow-xl">
           <CardHeader className="items-center text-center">
             <Settings className="w-10 h-10 text-primary mb-3" />
-            <CardTitle className="text-2xl font-bold text-primary">Set Your Preferences</CardTitle>
+            <CardTitle className="text-2xl font-bold text-primary">{t('wordsSetPreferencesPromptTitle')}</CardTitle>
           </CardHeader>
           <CardContent className="text-center space-y-4">
             <p className="text-muted-foreground">
-              Please set your preferred target language and field of knowledge in the 
-              <Link href="/settings" className="text-primary underline hover:text-accent"> Settings page</Link> 
-              before generating word sets.
+              {t('wordsSetPreferencesPromptDescriptionPart1')}{' '}
+              <Link href="/settings" className="text-primary underline hover:text-accent">
+                {t('wordsSetPreferencesPromptLinkText')}
+              </Link>{' '}
+              {t('wordsSetPreferencesPromptDescriptionPart2')}
             </p>
             <Button asChild>
-              <Link href="/settings">Go to Settings</Link>
+              <Link href="/settings">{t('wordsGoToSettingsButton')}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -331,14 +335,14 @@ export default function LearnClientPage() {
           <div className="flex items-center justify-center mb-2">
             <BookOpenText className="w-10 h-10 text-primary mr-3" />
             <CardTitle className="text-3xl font-bold text-center text-primary">
-              Word Learning Sets
+              {t('wordsTitle')}
             </CardTitle>
           </div>
           <CardDescription className="text-center text-lg">
-            Generating words for: <strong className="text-primary">{targetLanguageLabel}</strong> in <strong className="text-primary">{targetFieldLabel}</strong>.
+            {t('wordsGeneratingForLabel', { lang: targetLanguageLabel || '', field: targetFieldLabel || '' })}
             <br />
             {currentUser && (
-                <Link href="/settings" className="text-sm underline text-primary hover:text-accent">Change preferences in settings</Link>
+                <Link href="/settings" className="text-sm underline text-primary hover:text-accent">{t('wordsChangePreferencesLink')}</Link>
             )}
           </CardDescription>
         </CardHeader>
@@ -354,7 +358,7 @@ export default function LearnClientPage() {
            <div className="mt-2 border-t pt-6">
             <h3 className="text-xl font-semibold mb-3 text-primary flex items-center gap-2">
               <History className="w-6 h-6 text-accent" />
-              Previously Generated Sets
+              {t('wordsPreviouslyGeneratedTitle')}
             </h3>
             {isHistoryLoading ? (
               <div className="space-y-3">
@@ -366,7 +370,7 @@ export default function LearnClientPage() {
                 {previousWordSets.map((set, index) => (
                   <AccordionItem value={`item-${index}`} key={set.id || index}>
                     <AccordionTrigger className="text-base hover:bg-muted/50 px-3 py-3 rounded-md">
-                        Generated {formatDistanceToNow(new Date(set.timestamp), { addSuffix: true })} ({set.wordEntries.length} items)
+                        {t('wordsAccordionTriggerLabel', { date: formatDistanceToNow(new Date(set.timestamp), { addSuffix: true }), count: set.wordEntries.length })}
                     </AccordionTrigger>
                     <AccordionContent className="px-3 pt-2 pb-3">
                       <ScrollArea className="h-48 w-full rounded-md border p-3 bg-background">
@@ -396,8 +400,8 @@ export default function LearnClientPage() {
             ) : (
               <Alert variant="default" className="bg-secondary/30">
                 <AlertTriangle className="h-4 w-4 text-primary"/>
-                <AlertTitle>No History Yet</AlertTitle>
-                <AlertDescription>No previously generated word sets found for {targetLanguageLabel} - {targetFieldLabel}.</AlertDescription>
+                <AlertTitle>{t('wordsAlertNoHistoryTitle')}</AlertTitle>
+                <AlertDescription>{t('wordsAlertNoHistory', { lang: targetLanguageLabel || '', field: targetFieldLabel || '' })}</AlertDescription>
               </Alert>
             )}
           </div>
@@ -410,11 +414,11 @@ export default function LearnClientPage() {
             {isLoadingGeneration ? (
               <div className="flex items-center">
                 <Loader2 className="animate-spin h-5 w-5 mr-2"></Loader2>
-                Generating New Set...
+                {t('wordsGeneratingNewSetButton')}
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <Wand2 className="w-5 h-5" /> Generate New {currentWordsToGenerate}-Word Set
+                <Wand2 className="w-5 h-5" /> {t('wordsGenerateNewSetButton', { count: currentWordsToGenerate })}
               </div>
             )}
           </Button>
@@ -424,7 +428,7 @@ export default function LearnClientPage() {
           {!isLoadingGeneration && generatedWordEntries.length > 0 && (
             <div className="mt-8 border-t pt-8">
               <h3 className="text-2xl font-semibold mb-4 text-center text-primary flex items-center justify-center gap-2">
-                <SpellCheck className="w-7 h-7 text-accent"/> Your Newly Generated Set:
+                <SpellCheck className="w-7 h-7 text-accent"/> {t('wordsYourNewSetTitle')}
               </h3>
               <Carousel setApi={setCarouselApi} className="w-full max-w-xs sm:max-w-sm md:max-w-md mx-auto mb-6">
                 <CarouselContent>
@@ -467,7 +471,7 @@ export default function LearnClientPage() {
                                 aria-label={`Play audio for ${selectedWordEntry.word}`}
                                 className="text-muted-foreground hover:text-primary"
                             >
-                                <Volume2 className="w-7 h-7 mr-2" /> Listen to Word
+                                <Volume2 className="w-7 h-7 mr-2" /> {t('wordsListenToWordButton')}
                             </Button>
                         </div>
                     </CardContent>
@@ -476,7 +480,7 @@ export default function LearnClientPage() {
                   {selectedWordEntry.sentence && (
                     <div className="mt-4">
                       <h3 className="text-xl font-semibold mb-2 text-center text-primary flex items-center justify-center gap-2">
-                        <FileText className="w-6 h-6 text-accent" /> Example Sentence:
+                        <FileText className="w-6 h-6 text-accent" /> {t('wordsExampleSentenceTitle')}
                       </h3>
                       <Card className="shadow-md bg-secondary/20">
                         <CardContent className="p-4">
@@ -502,7 +506,7 @@ export default function LearnClientPage() {
               className="text-lg py-3 px-6 rounded-lg shadow-sm transition-colors"
             >
               <Home className="w-5 h-5 mr-2" />
-              Return to Home Page
+              {t('settingsReturnToHomeButton')}
             </Button>
           </div>
         </CardContent>
@@ -510,3 +514,5 @@ export default function LearnClientPage() {
     </div>
   );
 }
+
+    
