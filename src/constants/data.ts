@@ -6,21 +6,39 @@ export interface SelectionOption {
   emoji?: string;
 }
 
-// Note: For App Language in Settings, "value" will be "en", "ar", "es", "fr"
-// while label can be more descriptive like "English (Default)"
-// The LANGUAGES constant is used for UI display in Select components
+// Note: For App Language in Settings, "value" will be the language code like "en", "ar", etc.
+// The LANGUAGES constant is now aligned with TARGET_LANGUAGES to provide a comprehensive list for app display language selection.
 export const LANGUAGES: SelectionOption[] = [
-  { value: "en", label: "English", description: "The global lingua franca.", emoji: "🇬🇧" },
-  { value: "ar", label: "العربية (Arabic)", description: "Official language in many countries.", emoji: "🇸🇦" },
-  { value: "es", label: "Español (Spanish)", description: "Spoken in Spain and most of Latin America.", emoji: "🇪🇸" },
-  { value: "fr", label: "Français (French)", description: "Official language in 29 countries.", emoji: "🇫🇷" },
-  // These were for a different selector initially, keeping for potential future use or cleanup
-  { value: "German", label: "German", description: "Most spoken native language in the EU.", emoji: "🇩🇪" },
-  { value: "Italian", label: "Italian", description: "Language of art, music, and cuisine.", emoji: "🇮🇹" },
-  { value: "Portuguese", label: "Portuguese", description: "Spoken in Portugal and Brazil.", emoji: "🇵🇹" },
-  { value: "Japanese", label: "Japanese", description: "East Asian language from Japan.", emoji: "🇯🇵" },
-  { value: "Korean", label: "Korean", description: "Official language of North & South Korea.", emoji: "🇰🇷" },
-  { value: "Mandarin Chinese", label: "Mandarin Chinese", description: "Most spoken language by native speakers.", emoji: "🇨🇳" },
+  { value: "ar", label: "العربية (Arabic)", emoji: "🇸🇦" },
+  { value: "bn", label: "Bengali", emoji: "🇧🇩" },
+  { value: "zh-CN", label: "Chinese (Simplified)", emoji: "🇨🇳" },
+  { value: "zh-TW", label: "Chinese (Traditional)", emoji: "🇹🇼" },
+  { value: "nl", label: "Dutch", emoji: "🇳🇱" },
+  { value: "en", label: "English", emoji: "🇬🇧" },
+  { value: "fr", label: "French", emoji: "🇫🇷" },
+  { value: "de", label: "German", emoji: "🇩🇪" },
+  { value: "el", label: "Greek", emoji: "🇬🇷" },
+  { value: "hi", label: "Hindi", emoji: "🇮🇳" },
+  { value: "id", label: "Indonesian", emoji: "🇮🇩" },
+  { value: "it", label: "Italian", emoji: "🇮🇹" },
+  { value: "ja", label: "Japanese", emoji: "🇯🇵" },
+  { value: "ko", label: "Korean", emoji: "🇰🇷" },
+  { value: "ms", label: "Malay", emoji: "🇲🇾" },
+  { value: "pl", label: "Polish", emoji: "🇵🇱" },
+  { value: "pt", label: "Portuguese", emoji: "🇵🇹" },
+  { value: "ru", label: "Russian", emoji: "🇷🇺" },
+  { value: "es", label: "Spanish", emoji: "🇪🇸" },
+  { value: "sv", label: "Swedish", emoji: "🇸🇪" },
+  { value: "th", label: "Thai", emoji: "🇹🇭" },
+  { value: "tr", label: "Turkish", emoji: "🇹🇷" },
+  { value: "uk", label: "Ukrainian", emoji: "🇺🇦" },
+  { value: "ur", label: "Urdu", emoji: "🇵🇰" },
+  { value: "vi", label: "Vietnamese", emoji: "🇻🇳" },
+  { value: "he", label: "Hebrew", emoji: "🇮🇱" },
+  { value: "fa", label: "Persian (Farsi)", emoji: "🇮🇷" },
+  { value: "sw", label: "Swahili", emoji: "🇰🇪" },
+  { value: "no", label: "Norwegian", emoji: "🇳🇴" },
+  { value: "fi", label: "Finnish", emoji: "🇫🇮" },
 ];
 
 export const FIELDS: SelectionOption[] = [

@@ -1,3 +1,4 @@
+
 // src/lib/translations.ts
 
 export interface Translations {
@@ -48,6 +49,8 @@ export interface Translations {
   toastSettingsSavedDescription: string;
   toastSettingsSavedDescriptionConceptual: (replacements: { langLabel: string }) => string;
   toastSettingsSavedDescriptionPremium: (replacements: { langLabel: string }) => string;
+  toastPremiumLanguageTitle: string;
+  toastPremiumLanguageDescription: string;
   // Other
   loading: string;
   loginRequiredTitle: string;
@@ -274,6 +277,8 @@ export const translations: Record<"en" | "ar", Translations> = {
     toastSettingsSavedDescription: "Your preferences have been updated.",
     toastSettingsSavedDescriptionConceptual: ({ langLabel }) => `Note: App display language change to ${langLabel} is currently conceptual and will not yet change the interface language.`,
     toastSettingsSavedDescriptionPremium: ({ langLabel }) => `${langLabel} is a premium feature. Please upgrade to use it as your display language. Your preference has been saved, but the interface language will not change yet.`,
+    toastPremiumLanguageTitle: "Feature in Development",
+    toastPremiumLanguageDescription: "Support for this language is coming soon! Your selection has not been changed.",
     loading: "Loading...",
     loginRequiredTitle: "Login Required",
     loginRequiredDescription: "Please log in to access this page.",
@@ -486,6 +491,8 @@ export const translations: Record<"en" | "ar", Translations> = {
     toastSettingsSavedDescription: "تم تحديث تفضيلاتك.",
     toastSettingsSavedDescriptionConceptual: ({ langLabel }) => `ملاحظة: تغيير لغة عرض التطبيق إلى ${langLabel} هو حاليًا مفاهيمي ولن يغير لغة الواجهة بعد.`,
     toastSettingsSavedDescriptionPremium: ({ langLabel }) => `${langLabel} هي ميزة مميزة. يرجى الترقية لاستخدامها كلغة عرض. تم حفظ تفضيلك، لكن لغة الواجهة لن تتغير بعد.`,
+    toastPremiumLanguageTitle: "ميزة قيد التطوير",
+    toastPremiumLanguageDescription: "دعم هذه اللغة سيأتي قريبًا! لم يتم تغيير اختيارك الحالي.",
     loading: "جاري التحميل...",
     loginRequiredTitle: "تسجيل الدخول مطلوب",
     loginRequiredDescription: "يرجى تسجيل الدخول للوصول إلى هذه الصفحة.",
@@ -654,5 +661,3 @@ export const translations: Record<"en" | "ar", Translations> = {
     donateToastThankYouDescription: ({ amount }) => `نقدر تبرعك السخي بمبلغ ${amount}$. (هذا إجراء نائب)`,
   },
 };
-
-    

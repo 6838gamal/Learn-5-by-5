@@ -5,7 +5,7 @@ import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase'; // Import Firestore instance
 
 export type NumberOfWordsSetting = 3 | 5;
-export type AppLanguageSetting = "en" | "es" | "fr" | "ar";
+export type AppLanguageSetting = string; // Allow any language code as a string
 
 export interface UserSettings {
   numberOfWords: NumberOfWordsSetting;
@@ -50,7 +50,7 @@ export async function getUserSettings(userId: string): Promise<UserSettings> {
       // Ensure returned data conforms to UserSettings and has defaults for missing fields
       return {
         numberOfWords: data.numberOfWords === 3 || data.numberOfWords === 5 ? data.numberOfWords : defaultUserSettings.numberOfWords,
-        appLanguage: ["en", "es", "fr", "ar"].includes(data.appLanguage) ? data.appLanguage : defaultUserSettings.appLanguage,
+        appLanguage: typeof data.appLanguage === 'string' ? data.appLanguage : defaultUserSettings.appLanguage,
         targetLanguage: typeof data.targetLanguage === 'string' ? data.targetLanguage : defaultUserSettings.targetLanguage,
         targetField: typeof data.targetField === 'string' ? data.targetField : defaultUserSettings.targetField,
         enableAccessibilityAids: typeof data.enableAccessibilityAids === 'boolean' ? data.enableAccessibilityAids : defaultUserSettings.enableAccessibilityAids,

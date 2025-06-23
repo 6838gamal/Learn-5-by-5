@@ -17,7 +17,7 @@ const SaveSettingsInputSchema = z.object({
   userId: z.string().min(1, "User ID is required."),
   settings: z.object({
     numberOfWords: z.enum(["3", "5"]).transform(val => parseInt(val, 10) as NumberOfWordsSetting).optional(),
-    appLanguage: z.enum(["en", "es", "fr", "ar"]).optional(),
+    appLanguage: z.string().optional(), // Allow any string, validation happens client-side now
     targetLanguage: z.string().optional(), // New
     targetField: z.string().optional(), // New
     enableAccessibilityAids: z.boolean().optional(), // New

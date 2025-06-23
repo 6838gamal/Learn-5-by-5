@@ -24,12 +24,13 @@ import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { LanguageContext } from '@/contexts/LanguageContext'; // Import LanguageContext
 import { useLocalization } from '@/hooks/useLocalization'; // Import useLocalization
+import { Badge } from '@/components/ui/badge';
 
 const FREE_APP_LANGUAGES: AppLanguageSetting[] = ["en", "ar"];
 
 export default function SettingsPage() {
   const { toast } = useToast();
-  const { t, language: currentContextLang, direction } = useLocalization(); // Use localization hook
+  const { t, direction } = useLocalization(); // Use localization hook
   const languageContext = useContext(LanguageContext);
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -47,7 +48,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     // This function is defined inside useEffect to avoid it being a dependency,
-    // which was causing a re-render loop.
+    // which could cause a re-render loop.
     const loadUserSettings = async (user: User) => {
       setIsLoading(true);
       setError(null);
@@ -82,6 +83,22 @@ export default function SettingsPage() {
     return () => unsubscribe();
   }, [toast, t]); // Dependencies are stable, preventing loops.
 
+  const handleAppLanguageChange = (value: string) => {
+    const selectedLanguage = value as AppLanguageSetting;
+    const isFree = FREE_APP_LANGUAGES.includes(selectedLanguage);
+
+    if (isFree) {
+        setPendingAppLanguage(selectedLanguage);
+    } else {
+        toast({
+            title: t('toastPremiumLanguageTitle'),
+            description: t('toastPremiumLanguageDescription'),
+            variant: 'default',
+        });
+        // Do not update the state, so the UI reverts to the previous value.
+        // The Select component's `value` prop is `pendingAppLanguage`, so it won't change.
+    }
+  };
 
   const handleSaveSettings = async () => {
     if (!currentUser) {
@@ -102,28 +119,12 @@ export default function SettingsPage() {
     const result: SaveSettingsActionResult = await saveUserSettingsAction({ userId: currentUser.uid, settings: settingsToSave });
 
     if (result.success) {
-      let titleMessage = t('toastSettingsSavedTitle');
-      let descriptionMessage = t('toastSettingsSavedDescription');
-
-      if (settingsToSave.appLanguage) {
-        const chosenLang = settingsToSave.appLanguage;
-        const isFree = FREE_APP_LANGUAGES.includes(chosenLang);
-        const langLabel = APP_LANGUAGES_OPTIONS.find(l => l.value.toLowerCase().startsWith(chosenLang.toLowerCase()))?.label || chosenLang;
-        
-        if (languageContext) {
-           languageContext.setLanguage(chosenLang); // Update context
-        }
-
-        if (isFree) {
-          descriptionMessage = t('toastSettingsSavedDescriptionConceptual', { langLabel: langLabel });
-        } else {
-          descriptionMessage = t('toastSettingsSavedDescriptionPremium', { langLabel: langLabel });
-        }
+      if (languageContext && settingsToSave.appLanguage) {
+           languageContext.setLanguage(settingsToSave.appLanguage); // Update context
       }
-      
       toast({ 
-        title: titleMessage, 
-        description: descriptionMessage
+        title: t('toastSettingsSavedTitle'), 
+        description: t('toastSettingsSavedDescription')
       });
     } else if (result.error) {
       setError(result.error);
@@ -337,7 +338,7 @@ export default function SettingsPage() {
             </h3>
             <Select 
               value={pendingAppLanguage} 
-              onValueChange={(value) => setPendingAppLanguage(value as AppLanguageSetting)}
+              onValueChange={handleAppLanguageChange}
               disabled={isSaving}
               dir={direction}
             >
@@ -345,10 +346,17 @@ export default function SettingsPage() {
                  {appLanguageDisplayNode}
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="en">English (Default)</SelectItem>
-                <SelectItem value="ar">العربية (Arabic)</SelectItem>
-                <SelectItem value="es">Español (Spanish - Premium)</SelectItem>
-                <SelectItem value="fr">Français (French - Premium)</SelectItem>
+                {APP_LANGUAGES_OPTIONS.map(lang => (
+                  <SelectItem key={lang.value} value={lang.value}>
+                    <div className="flex items-center gap-2">
+                        {lang.emoji && <span className="text-lg">{lang.emoji}</span>}
+                        <span>{lang.label}</span>
+                        {!FREE_APP_LANGUAGES.includes(lang.value as AppLanguageSetting) && (
+                            <Badge variant="outline" className="ml-auto font-normal">Premium</Badge>
+                        )}
+                    </div>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <p className="text-sm text-muted-foreground">
