@@ -1,20 +1,9 @@
 
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import ConditionalAppShell from '@/components/ConditionalAppShell';
 import { LanguageProvider } from '@/contexts/LanguageContext'; // Import LanguageProvider
-
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin', 'latin-ext'], // Ensure only valid subsets are listed
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin', 'latin-ext'], // Ensure only valid subsets are listed
-});
 
 export const metadata: Metadata = {
   title: 'LinguaLeap', // This could also be localized later if needed at build time
@@ -28,7 +17,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className="antialiased">
         <LanguageProvider> {/* Wrap with LanguageProvider */}
           <ConditionalAppShell>
             {children}
