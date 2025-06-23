@@ -174,8 +174,15 @@ export default function SoundsPage() {
     }
   };
   
-  const targetLanguageLabel = TARGET_LANGUAGES.find(l => l.value === settingsTargetLanguage)?.label || settingsTargetLanguage;
-  const targetFieldLabel = TARGET_FIELDS.find(f => f.value === settingsTargetField)?.label || settingsTargetField;
+  const targetLanguageLabel = useMemo(() => {
+    const lang = TARGET_LANGUAGES.find(l => l.value === settingsTargetLanguage);
+    return lang ? lang.label : (settingsTargetLanguage || "");
+  }, [settingsTargetLanguage]);
+
+  const targetFieldLabel = useMemo(() => {
+    const field = TARGET_FIELDS.find(f => f.value === settingsTargetField);
+    return field ? field.label : (settingsTargetField || "");
+  }, [settingsTargetField]);
 
 
   if (!isClient || isSettingsLoading) {
