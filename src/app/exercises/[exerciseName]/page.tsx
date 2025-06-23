@@ -214,8 +214,8 @@ export default function ExerciseDetailPage() {
     }
     
     if (words.length === 0 && !isDataLoading) {
-        const langLabel = TARGET_LANGUAGES.find(l => l.value === settingsTargetLanguage)?.label || settingsTargetLanguage;
-        const fieldLabel = TARGET_FIELDS.find(f => f.value === settingsTargetField)?.label || settingsTargetField;
+        const langLabel = TARGET_LANGUAGES.find(l => l.value === settingsTargetLanguage)?.label || settingsTargetLanguage || "";
+        const fieldLabel = TARGET_FIELDS.find(f => f.value === settingsTargetField)?.label || settingsTargetField || "";
         return (
             <Alert variant="default" className="bg-secondary/30">
                 <AlertTriangle className="h-4 w-4 text-primary" />
@@ -335,5 +335,3 @@ export default function ExerciseDetailPage() {
     </div>
   );
 }
-
-    
