@@ -14,6 +14,7 @@ import {
 import { 
   fetchUserActivitiesAction, 
   fetchUserLearningStatsAction,
+  handleGenerateAudio, // Import audio action
   type FetchUserActivitiesResult,
   type FetchUserLearningStatsResult
 } from "@/app/actions";
@@ -46,6 +47,7 @@ import {
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts";
 import { useRouter } from "next/navigation";
 import { useLocalization } from "@/hooks/useLocalization";
+import { useToast } from "@/hooks/use-toast";
 
 const initialStats: LearningStats = { 
   totalWordsLearned: 0, 
@@ -62,9 +64,11 @@ export default function DashboardClientPage() {
   const [isLoadingPage, setIsLoadingPage] = useState(true); // Unified loading state
   const [selectedActivity, setSelectedActivity] = useState<ActivityRecord | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [audioLoading, setAudioLoading] = useState<string | null>(null); // For audio loading state
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const { t } = useLocalization();
+  const { toast } = useToast();
 
   const loadDashboardData = useCallback(async (user: User | null) => {
     setError(null);
@@ -123,8 +127,33 @@ export default function DashboardClientPage() {
     setIsDetailDialogOpen(true);
   };
   
-  const handlePlayAudioInDialog = (text: string, type: 'word' | 'sentence') => {
-    alert(`Audio playback for ${type} "${text}" is not yet implemented.`);
+  const handlePlayAudioInDialog = async (text: string) => {
+    if (!text) return;
+    if (audioLoading) return; // Prevent multiple requests at once
+
+    setAudioLoading(text);
+    try {
+      const result = await handleGenerateAudio(text);
+      if (result.audioDataUri) {
+        const audio = new Audio(result.audioDataUri);
+        audio.play();
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Audio Generation Failed",
+          description: result.error || "Could not generate audio for the selected text.",
+        });
+      }
+    } catch (e) {
+      console.error("Failed to play audio:", e);
+      toast({
+        variant: "destructive",
+        title: "Playback Error",
+        description: "An unexpected error occurred while trying to play the audio.",
+      });
+    } finally {
+      setAudioLoading(null);
+    }
   };
 
   const currentStats = stats || initialStats;
@@ -243,14 +272,14 @@ export default function DashboardClientPage() {
                     <li key={index} className="border-b pb-2 mb-2 last:border-b-0 last:pb-0 last:mb-0">
                       <div className="flex items-center justify-between">
                         <strong className="text-sm text-foreground">{entry.word}</strong>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handlePlayAudioInDialog(entry.word, 'word')} aria-label={`Play audio for ${entry.word}`}>
-                          <Volume2 className="w-4 h-4 text-muted-foreground hover:text-primary" />
+                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handlePlayAudioInDialog(entry.word)} disabled={!!audioLoading} aria-label={`Play audio for ${entry.word}`}>
+                           {audioLoading === entry.word ? <Loader2 className="w-4 h-4 animate-spin"/> : <Volume2 className="w-4 h-4 text-muted-foreground hover:text-primary" />}
                         </Button>
                       </div>
                       <div className="flex items-start justify-between gap-1 mt-1">
                         <p className="text-xs text-muted-foreground flex-grow">{entry.sentence}</p>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handlePlayAudioInDialog(entry.sentence, 'sentence')} aria-label={`Play audio for sentence: ${entry.sentence}`}>
-                          <Volume2 className="w-4 h-4 text-muted-foreground hover:text-primary" />
+                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handlePlayAudioInDialog(entry.sentence)} disabled={!!audioLoading} aria-label={`Play audio for sentence: ${entry.sentence}`}>
+                           {audioLoading === entry.sentence ? <Loader2 className="w-4 h-4 animate-spin"/> : <Volume2 className="w-4 h-4 text-muted-foreground hover:text-primary" />}
                         </Button>
                       </div>
                     </li>
@@ -297,9 +326,15 @@ export default function DashboardClientPage() {
             </div>
             <div className="flex items-start">
               <span className="text-sm font-medium text-muted-foreground w-32 mt-1">{t('dashboardDialogConversation')}</span>
-              <ScrollArea className="h-32 w-full rounded-md border p-2">
-                <p className="text-sm text-foreground whitespace-pre-line">{conv.conversation}</p>
-              </ScrollArea>
+              <div className="flex-grow">
+                <Button variant="ghost" size="sm" onClick={() => handlePlayAudioInDialog(conv.conversation)} disabled={!!audioLoading} className="mb-2 w-full justify-start">
+                    {audioLoading === conv.conversation ? <Loader2 className="w-4 h-4 mr-2 animate-spin"/> : <Volume2 className="w-4 h-4 mr-2"/>}
+                    Play Conversation
+                </Button>
+                <ScrollArea className="h-32 w-full rounded-md border p-2">
+                    <p className="text-sm text-foreground whitespace-pre-line">{conv.conversation}</p>
+                </ScrollArea>
+              </div>
             </div>
             <div className="flex items-center">
               <span className="text-sm font-medium text-muted-foreground w-32">{t('dashboardDialogDate')}</span>
@@ -409,5 +444,3 @@ export default function DashboardClientPage() {
     </div>
   );
 }
-
-    

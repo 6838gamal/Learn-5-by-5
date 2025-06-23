@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { MessageCircle, Languages, ListChecks, AlertTriangle, Wand2, Loader2, Unlock, Settings as SettingsIcon, Home } from "lucide-react";
+import { MessageCircle, Languages, ListChecks, AlertTriangle, Wand2, Loader2, Unlock, Settings as SettingsIcon, Home, Volume2 } from "lucide-react";
 import { 
   getActivityData as getActivityDataLocal, 
   addConversationActivity as addConversationActivityLocal,
@@ -17,6 +17,7 @@ import {
 import { TARGET_LANGUAGES } from "@/constants/data";
 import { 
   handleGenerateConversation, 
+  handleGenerateAudio, // Import the audio action
   type GenerateConversationActionResult,
   logConversationActivityAction,
   fetchUserActivitiesAction 
@@ -40,6 +41,7 @@ export default function ConversationsPage() {
   const [selectedWords, setSelectedWords] = useState<string[]>([]);
   const [generatedConversation, setGeneratedConversation] = useState<string | null>(null);
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false); // State for audio loading
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const { t } = useLocalization();
@@ -167,6 +169,33 @@ export default function ConversationsPage() {
         title: "Conversation Generation Failed",
         description: result.error,
       });
+    }
+  };
+
+  const handlePlayConversationAudio = async () => {
+    if (!generatedConversation) return;
+    setIsLoadingAudio(true);
+    try {
+      const result = await handleGenerateAudio(generatedConversation);
+      if (result.audioDataUri) {
+        const audio = new Audio(result.audioDataUri);
+        audio.play();
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Audio Generation Failed",
+          description: result.error || "Could not generate audio for the conversation.",
+        });
+      }
+    } catch (e) {
+      console.error("Failed to play audio:", e);
+      toast({
+        variant: "destructive",
+        title: "Playback Error",
+        description: "An unexpected error occurred while trying to play the audio.",
+      });
+    } finally {
+      setIsLoadingAudio(false);
     }
   };
   
@@ -318,7 +347,13 @@ export default function ConversationsPage() {
 
           {generatedConversation && (
             <div className="mt-6 space-y-3">
-              <h3 className="text-xl font-semibold text-primary">{t('conversationsGeneratedTitle')}</h3>
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-semibold text-primary">{t('conversationsGeneratedTitle')}</h3>
+                <Button variant="outline" size="sm" onClick={handlePlayConversationAudio} disabled={isLoadingAudio}>
+                  {isLoadingAudio ? <Loader2 className="h-4 w-4 animate-spin" /> : <Volume2 className="h-4 w-4" />}
+                  <span className="ml-2">Play Audio</span>
+                </Button>
+              </div>
               <Card className="bg-muted/30">
                 <CardContent className="p-4 whitespace-pre-line text-sm">
                   {generatedConversation}
@@ -339,4 +374,3 @@ export default function ConversationsPage() {
     </div>
   );
 }
-

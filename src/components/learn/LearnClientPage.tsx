@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TARGET_LANGUAGES, TARGET_FIELDS } from "@/constants/data"; 
 import { 
   handleGenerateWordSet, 
+  handleGenerateAudio, // Import audio action
   type GenerateWordSetActionResult,
   logWordSetActivityAction,
   fetchUserActivitiesAction,
@@ -59,6 +60,7 @@ export default function LearnClientPage() {
   const [isLoadingGeneration, setIsLoadingGeneration] = useState(false); 
   const [isSettingsLoading, setIsSettingsLoading] = useState(true);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [audioLoading, setAudioLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const router = useRouter();
@@ -252,14 +254,33 @@ export default function LearnClientPage() {
     }
   }
   
-  const handlePlayWordAudio = (word: string | null) => {
-    if (!word) return;
-    alert(`Audio playback for "${word}" is not yet implemented.`);
-  };
+  const handlePlayAudio = async (text: string | null) => {
+    if (!text) return;
+    if (audioLoading) return; // Prevent multiple requests at once
 
-  const handlePlaySentenceAudio = (sentence: string | null) => {
-    if(!sentence) return;
-    alert(`Audio playback for the sentence "${sentence}" is not yet implemented.`);
+    setAudioLoading(text);
+    try {
+      const result = await handleGenerateAudio(text);
+      if (result.audioDataUri) {
+        const audio = new Audio(result.audioDataUri);
+        audio.play();
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Audio Generation Failed",
+          description: result.error || "Could not generate audio for the selected text.",
+        });
+      }
+    } catch (e) {
+      console.error("Failed to play audio:", e);
+      toast({
+        variant: "destructive",
+        title: "Playback Error",
+        description: "An unexpected error occurred while trying to play the audio.",
+      });
+    } finally {
+      setAudioLoading(null);
+    }
   };
 
   const handleGoToHome = () => router.push("/");
@@ -379,14 +400,14 @@ export default function LearnClientPage() {
                             <li key={entryIndex} className="pb-2 border-b last:border-b-0">
                               <div className="flex justify-between items-center">
                                 <p className="font-semibold text-foreground">{entry.word}</p>
-                                <Button variant="ghost" size="sm" onClick={() => handlePlayWordAudio(entry.word)} aria-label={`Play audio for ${entry.word}`}>
-                                  <Volume2 className="w-4 h-4"/>
+                                <Button variant="ghost" size="sm" onClick={() => handlePlayAudio(entry.word)} disabled={!!audioLoading} aria-label={`Play audio for ${entry.word}`}>
+                                  {audioLoading === entry.word ? <Loader2 className="w-4 h-4 animate-spin"/> : <Volume2 className="w-4 h-4"/>}
                                 </Button>
                               </div>
                               <div className="flex justify-between items-start mt-1">
                                 <p className="text-sm text-muted-foreground flex-grow pr-2">{entry.sentence}</p>
-                                <Button variant="ghost" size="sm" onClick={() => handlePlaySentenceAudio(entry.sentence)} aria-label={`Play audio for sentence: ${entry.sentence}`}>
-                                  <Volume2 className="w-4 h-4"/>
+                                <Button variant="ghost" size="sm" onClick={() => handlePlayAudio(entry.sentence)} disabled={!!audioLoading} aria-label={`Play audio for sentence: ${entry.sentence}`}>
+                                  {audioLoading === entry.sentence ? <Loader2 className="w-4 h-4 animate-spin"/> : <Volume2 className="w-4 h-4"/>}
                                 </Button>
                               </div>
                             </li>
@@ -467,11 +488,13 @@ export default function LearnClientPage() {
                             <Button 
                                 variant="ghost" 
                                 size="lg" 
-                                onClick={() => handlePlayWordAudio(selectedWordEntry.word)}
+                                onClick={() => handlePlayAudio(selectedWordEntry.word)}
                                 aria-label={`Play audio for ${selectedWordEntry.word}`}
+                                disabled={!!audioLoading}
                                 className="text-muted-foreground hover:text-primary"
                             >
-                                <Volume2 className="w-7 h-7 mr-2" /> {t('wordsListenToWordButton')}
+                                {audioLoading === selectedWordEntry.word ? <Loader2 className="w-7 h-7 mr-2 animate-spin"/> : <Volume2 className="w-7 h-7 mr-2" />}
+                                {t('wordsListenToWordButton')}
                             </Button>
                         </div>
                     </CardContent>
@@ -486,8 +509,8 @@ export default function LearnClientPage() {
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between gap-3">
                             <p className="text-lg text-foreground flex-grow">{selectedWordEntry.sentence}</p>
-                            <Button variant="ghost" size="icon" onClick={() => handlePlaySentenceAudio(selectedWordEntry.sentence)} aria-label={`Play audio for sentence: ${selectedWordEntry.sentence}`}>
-                              <Volume2 className="w-6 h-6 text-muted-foreground hover:text-primary" />
+                            <Button variant="ghost" size="icon" onClick={() => handlePlayAudio(selectedWordEntry.sentence)} disabled={!!audioLoading} aria-label={`Play audio for sentence: ${selectedWordEntry.sentence}`}>
+                              {audioLoading === selectedWordEntry.sentence ? <Loader2 className="w-6 h-6 animate-spin"/> : <Volume2 className="w-6 h-6 text-muted-foreground hover:text-primary" />}
                             </Button>
                           </div>
                         </CardContent>
@@ -514,5 +537,3 @@ export default function LearnClientPage() {
     </div>
   );
 }
-
-    
