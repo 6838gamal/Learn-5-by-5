@@ -4,6 +4,7 @@
 
 import { generateWordSet, type GenerateWordSetInput, type GenerateWordSetOutput } from "@/ai/flows/generate-word-set";
 import { generateConversation, type GenerateConversationInput, type GenerateConversationOutput } from "@/ai/flows/generate-conversation-flow";
+import { generateAudio, type GenerateAudioOutput } from "@/ai/flows/generate-audio-flow";
 import { z } from "zod";
 import type { WordEntry, WordSetActivityRecord, ConversationActivityRecord, LearningStats, ActivityRecord } from "@/lib/activityStore"; 
 import { 
@@ -115,6 +116,34 @@ export async function handleGenerateConversation(
     return { error: errorMessage };
   }
 }
+
+// --- TTS Audio Generation Action ---
+const GenerateAudioActionInputSchema = z.string().min(1, "Text for audio generation cannot be empty.");
+
+export interface GenerateAudioActionResult {
+  audioDataUri?: string;
+  error?: string;
+}
+
+export async function handleGenerateAudio(text: string): Promise<GenerateAudioActionResult> {
+   if (!process.env.GOOGLE_API_KEY) {
+    console.error("CRITICAL: GOOGLE_API_KEY is not set for audio generation.");
+    return { error: "AI Service API Key is not configured. Please contact support or check server configuration." };
+  }
+  try {
+    const validatedText = GenerateAudioActionInputSchema.parse(text);
+    const result: GenerateAudioOutput = await generateAudio(validatedText);
+    if (result.audioDataUri) {
+      return { audioDataUri: result.audioDataUri };
+    }
+    return { error: "No audio was generated. Please try again." };
+  } catch (e) {
+    console.error("Error in handleGenerateAudio action:", e);
+    const errorMessage = getErrorMessage(e, "An unexpected error occurred while generating audio.");
+    return { error: errorMessage };
+  }
+}
+
 
 // --- Activity Logging and Fetching Actions ---
 

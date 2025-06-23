@@ -11,7 +11,11 @@ import {
   type WordSetActivityRecord, 
   type WordEntry 
 } from "@/lib/activityStore";
-import { fetchUserActivitiesAction, type FetchUserActivitiesResult } from "@/app/actions"; // Firestore action
+import { 
+  fetchUserActivitiesAction, 
+  type FetchUserActivitiesResult,
+  handleGenerateAudio,
+} from "@/app/actions"; // Firestore action
 import { getTargetLanguageSettingAction, getTargetFieldSettingAction } from '@/app/settingsActions';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -36,6 +40,7 @@ export default function SoundsPage() {
   const [settingsTargetField, setSettingsTargetField] = useState<string | undefined>();
   const [isSettingsLoading, setIsSettingsLoading] = useState(true);
   const [isLoadingData, setIsLoadingData] = useState(false); // For data fetching after settings are loaded
+  const [audioLoading, setAudioLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const { t } = useLocalization();
@@ -140,13 +145,33 @@ export default function SoundsPage() {
   }, [isClient, isSettingsLoading, settingsTargetLanguage, settingsTargetField, currentUser, loadSoundEntries]);
 
 
-  const handlePlayWordAudio = (word: string) => {
-    alert(`Audio playback for "${word}" is not yet implemented.`);
-  };
+  const handlePlayAudio = async (text: string | null) => {
+    if (!text) return;
+    if (audioLoading) return; // Prevent multiple requests at once
 
-  const handlePlaySentenceAudio = (sentence: string | null) => {
-    if (!sentence) return;
-    alert(`Audio playback for the sentence "${sentence}" is not yet implemented.`);
+    setAudioLoading(text);
+    try {
+      const result = await handleGenerateAudio(text);
+      if (result.audioDataUri) {
+        const audio = new Audio(result.audioDataUri);
+        audio.play();
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Audio Generation Failed",
+          description: result.error || "Could not generate audio for the selected text.",
+        });
+      }
+    } catch (e) {
+      console.error("Failed to play audio:", e);
+      toast({
+        variant: "destructive",
+        title: "Playback Error",
+        description: "An unexpected error occurred while trying to play the audio.",
+      });
+    } finally {
+      setAudioLoading(null);
+    }
   };
   
   const targetLanguageLabel = TARGET_LANGUAGES.find(l => l.value === settingsTargetLanguage)?.label || settingsTargetLanguage;
@@ -258,11 +283,12 @@ export default function SoundsPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handlePlayWordAudio(entry.word)}
+                          onClick={() => handlePlayAudio(entry.word)}
                           aria-label={`Play audio for ${entry.word}`}
+                          disabled={!!audioLoading}
                           className="text-muted-foreground hover:text-primary"
                         >
-                          <Volume2 className="w-5 h-5" />
+                          {audioLoading === entry.word ? <Loader2 className="w-5 h-5 animate-spin" /> : <Volume2 className="w-5 h-5" />}
                         </Button>
                       </div>
                       {entry.sentence && (
@@ -276,11 +302,12 @@ export default function SoundsPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => handlePlaySentenceAudio(entry.sentence)}
+                              onClick={() => handlePlayAudio(entry.sentence)}
                               aria-label={`Play audio for sentence: ${entry.sentence}`}
+                              disabled={!!audioLoading}
                               className="text-muted-foreground hover:text-primary shrink-0"
                             >
-                              <Volume2 className="w-5 h-5" />
+                              {audioLoading === entry.sentence ? <Loader2 className="w-5 h-5 animate-spin" /> : <Volume2 className="w-5 h-5" />}
                             </Button>
                           </div>
                         </div>
@@ -313,5 +340,3 @@ export default function SoundsPage() {
     </div>
   );
 }
-
-    
