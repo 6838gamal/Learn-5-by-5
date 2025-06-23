@@ -11,6 +11,7 @@ import {
   getActivitiesFromFirestore,
   getLearningStatsFromFirestore
 } from "@/lib/userActivityService";
+import { addSupportTicketToFirestore, getSupportTicketsFromFirestore, type SupportTicket } from '@/lib/supportService';
 
 const WordSetActionInputSchema = z.object({
   language: z.string().min(1, "Language is required."),
@@ -208,7 +209,7 @@ export async function fetchUserLearningStatsAction(data: {userId: string}): Prom
   }
 }
 
-// --- Support Request Action (Conceptual) ---
+// --- Support Request Action ---
 const SupportRequestInputSchema = z.object({
   email: z.string().email("Invalid email address.").min(1, "Email is required."),
   subject: z.string().min(3, "Subject must be at least 3 characters.").max(100, "Subject is too long."),
@@ -223,29 +224,55 @@ export interface HandleSupportRequestResult {
   message?: string;
   error?: string;
   errors?: z.ZodIssue[];
+  ticketId?: string;
 }
 
 export async function handleSupportRequest(data: SupportRequestInput): Promise<HandleSupportRequestResult> {
   try {
     const validatedData = SupportRequestInputSchema.parse(data);
-    console.log("Support Request Received (Conceptual):", validatedData);
+    
+    if (!validatedData.userId) {
+      console.log("Conceptual Support Request Received (Unauthenticated):", validatedData);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return { success: true, message: "Your support request has been submitted successfully! We'll get back to you soon." };
+    }
 
-    // In a real application, you would:
-    // 1. Save this data to a database (e.g., a 'support_tickets' collection in Firestore).
-    // 2. Potentially send an email to your support team.
-    // 3. Potentially send a confirmation email to the user.
+    const ticketId = await addSupportTicketToFirestore({
+      userId: validatedData.userId,
+      email: validatedData.email,
+      subject: validatedData.subject,
+      category: validatedData.category,
+      description: validatedData.description,
+      status: 'Open',
+    });
 
-    // For this prototype, we just simulate success.
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate async operation
-
-    return { success: true, message: "Your support request has been submitted successfully! We'll get back to you soon." };
+    return { success: true, message: "Your support request has been submitted successfully! We'll get back to you soon.", ticketId };
   } catch (e) {
     console.error("Error handling support request:", e);
     if (e instanceof z.ZodError) {
-      // The getErrorMessage function handles ZodError specifically, but if you want to return `errors` array:
       return { error: "Validation failed. Please check your input.", errors: e.errors };
     }
     const errorMessage = getErrorMessage(e, "An unexpected error occurred. Please try again.");
     return { error: errorMessage };
   }
+}
+
+const FetchSupportTicketsInputSchema = z.object({
+  userId: z.string().min(1, "User ID is required."),
+});
+export interface FetchSupportTicketsResult {
+  tickets?: SupportTicket[];
+  error?: string;
+}
+
+export async function fetchUserSupportTicketsAction(data: { userId: string }): Promise<FetchSupportTicketsResult> {
+    try {
+        const validatedData = FetchSupportTicketsInputSchema.parse(data);
+        const tickets = await getSupportTicketsFromFirestore(validatedData.userId);
+        return { tickets };
+    } catch (e) {
+        console.error("Error fetching user support tickets:", e);
+        const errorMessage = getErrorMessage(e, "Failed to fetch support tickets.");
+        return { error: errorMessage };
+    }
 }

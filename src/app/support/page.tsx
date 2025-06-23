@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,13 +13,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { LifeBuoy, Send, Home, Mail, ListFilter, Type, CheckCircle, AlertTriangle, Loader2, Unlock } from "lucide-react";
+import { LifeBuoy, Send, Home, Mail, ListFilter, Type, CheckCircle, AlertTriangle, Loader2, Unlock, History, Ticket } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { SUPPORT_CATEGORIES } from '@/constants/data';
-import { handleSupportRequest, type HandleSupportRequestResult, type SupportRequestInput } from '@/app/actions';
+import { handleSupportRequest, fetchUserSupportTicketsAction, type HandleSupportRequestResult, type SupportRequestInput } from '@/app/actions';
+import type { SupportTicket } from '@/lib/supportService';
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { useLocalization } from '@/hooks/useLocalization';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { formatDistanceToNow } from 'date-fns';
+import { ar as arLocale, enUS as enLocale } from 'date-fns/locale';
 
 const supportFormSchema = z.object({
   email: z.string().email("Invalid email address.").min(1, "Email is required."),
@@ -31,12 +37,17 @@ const supportFormSchema = z.object({
 type SupportFormValues = z.infer<typeof supportFormSchema>;
 
 export default function SupportPage() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [formSubmittedSuccessfully, setFormSubmittedSuccessfully] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [isLoadingTickets, setIsLoadingTickets] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  
   const { toast } = useToast();
-  const { t } = useLocalization();
+  const { t, language } = useLocalization();
+  const dateLocale = language === 'ar' ? arLocale : enLocale;
 
   const form = useForm<SupportFormValues>({
     resolver: zodResolver(supportFormSchema),
@@ -47,21 +58,36 @@ export default function SupportPage() {
       description: "",
     },
   });
+  
+  const fetchTickets = useCallback(async (user: User) => {
+    setIsLoadingTickets(true);
+    setFetchError(null);
+    const result = await fetchUserSupportTicketsAction({ userId: user.uid });
+    if (result.tickets) {
+      setTickets(result.tickets);
+    } else if (result.error) {
+      setFetchError(result.error);
+      toast({ variant: "destructive", title: t('error'), description: result.error });
+    }
+    setIsLoadingTickets(false);
+  }, [toast, t]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
-      if (user && user.email) {
-        form.setValue("email", user.email);
-      }
       setIsAuthLoading(false);
+      if (user) {
+        if (user.email) form.setValue("email", user.email);
+        fetchTickets(user);
+      } else {
+        setIsLoadingTickets(false);
+      }
     });
     return () => unsubscribe();
-  }, [form]);
+  }, [form, fetchTickets]);
 
   async function onSubmit(data: SupportFormValues) {
-    setIsLoading(true);
-    setFormSubmittedSuccessfully(false);
+    setIsSubmitting(true);
 
     const submissionData: SupportRequestInput = {
       ...data,
@@ -69,29 +95,42 @@ export default function SupportPage() {
     };
     
     const result: HandleSupportRequestResult = await handleSupportRequest(submissionData);
-    setIsLoading(false);
+    setIsSubmitting(false);
 
-    if (result.success && result.message) {
-      toast({
-        title: t('supportToastSuccessTitle'),
-        description: t('supportToastSuccessDescription'),
-      });
-      setFormSubmittedSuccessfully(true);
+    if (result.success) {
+      toast({ title: t('supportToastSuccessTitle'), description: t('supportToastSuccessDescription') });
       form.reset();
-       if (currentUser && currentUser.email) { // Re-set email if user is logged in
-        form.setValue("email", currentUser.email);
+      if (currentUser) {
+        if (currentUser.email) form.setValue("email", currentUser.email);
+        fetchTickets(currentUser);
       }
     } else if (result.error) {
       let description = result.error;
       if (result.errors) {
         description = result.errors.map(err => `${err.path.join('.')}: ${err.message}`).join('; ');
       }
-      toast({
-        variant: "destructive",
-        title: t('supportToastErrorTitle'),
-        description: description,
-      });
+      toast({ variant: "destructive", title: t('supportToastErrorTitle'), description: description });
     }
+  }
+  
+  const getStatusVariant = (status: SupportTicket['status']): "default" | "secondary" | "destructive" | "outline" => {
+    switch (status) {
+      case 'Open': return 'default';
+      case 'In Progress': return 'secondary';
+      case 'Resolved': return 'outline';
+      case 'Closed': return 'destructive';
+      default: return 'default';
+    }
+  };
+  
+  const getStatusLabel = (status: SupportTicket['status']) => {
+    const keyMap = {
+        'Open': 'supportStatusOpen',
+        'In Progress': 'supportStatusInProgress',
+        'Resolved': 'supportStatusResolved',
+        'Closed': 'supportStatusClosed'
+    } as const;
+    return t(keyMap[status]);
   }
   
   if (isAuthLoading) {
@@ -132,107 +171,150 @@ export default function SupportPage() {
             </AlertDescription>
           </Alert>
 
-          {formSubmittedSuccessfully ? (
-            <Alert variant="default" className="bg-green-50 border-green-300 text-green-700">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <AlertTitle className="font-semibold">{t('supportSuccessTitle')}</AlertTitle>
-              <AlertDescription>
-                {t('supportSuccessDescription')}
-                <Button variant="link" onClick={() => setFormSubmittedSuccessfully(false)} className="text-green-700 pl-1">
-                    {t('supportSubmitAnother')}
-                </Button>
-              </AlertDescription>
-            </Alert>
-          ) : (
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-2"><Mail className="w-4 h-4 text-muted-foreground" />{t('supportEmailLabel')}</FormLabel>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2"><Mail className="w-4 h-4 text-muted-foreground" />{t('supportEmailLabel')}</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="you@example.com" {...field} disabled={isSubmitting || (!!currentUser && !!currentUser.email)} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="subject"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2"><Type className="w-4 h-4 text-muted-foreground" />{t('supportSubjectLabel')}</FormLabel>
+                    <FormControl>
+                      <Input placeholder={t('supportSubjectPlaceholder')} {...field} disabled={isSubmitting} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2"><ListFilter className="w-4 h-4 text-muted-foreground" />{t('supportCategoryLabel')}</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
                       <FormControl>
-                        <Input type="email" placeholder="you@example.com" {...field} disabled={isLoading || (!!currentUser && !!currentUser.email)} />
+                        <SelectTrigger>
+                          <SelectValue placeholder={t('supportCategoryPlaceholder')} />
+                        </SelectTrigger>
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="subject"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-2"><Type className="w-4 h-4 text-muted-foreground" />{t('supportSubjectLabel')}</FormLabel>
-                      <FormControl>
-                        <Input placeholder={t('supportSubjectPlaceholder')} {...field} disabled={isLoading} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="category"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-2"><ListFilter className="w-4 h-4 text-muted-foreground" />{t('supportCategoryLabel')}</FormLabel>
-                       <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={t('supportCategoryPlaceholder')} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {SUPPORT_CATEGORIES.map((cat) => (
-                            <SelectItem key={cat.value} value={cat.value}>
-                              {cat.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-2"><Type className="w-4 h-4 text-muted-foreground" />{t('supportDescriptionLabel')}</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder={t('supportDescriptionPlaceholder')}
-                          className="min-h-[150px] text-base"
-                          {...field}
-                          disabled={isLoading}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="w-full bg-accent hover:bg-accent/90 text-accent-foreground text-xl py-7 rounded-lg shadow-lg transition-all hover:shadow-xl hover:scale-[1.02]"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                     <>
-                        <Loader2 className="mr-2.5 h-6 w-6 animate-spin" /> {t('supportSendingButton')}
-                     </>
-                  ) : (
-                     <>
-                        <Send className="mr-2.5 h-6 w-6" /> {t('supportSubmitButton')}
-                     </>
-                  )}
-                </Button>
-              </form>
-            </Form>
+                      <SelectContent>
+                        {SUPPORT_CATEGORIES.map((cat) => (
+                          <SelectItem key={cat.value} value={cat.value}>
+                            {cat.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2"><Type className="w-4 h-4 text-muted-foreground" />{t('supportDescriptionLabel')}</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder={t('supportDescriptionPlaceholder')}
+                        className="min-h-[150px] text-base"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full bg-accent hover:bg-accent/90 text-accent-foreground text-xl py-7 rounded-lg shadow-lg transition-all hover:shadow-xl hover:scale-[1.02]"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2.5 h-6 w-6 animate-spin" /> {t('supportSendingButton')}
+                    </>
+                ) : (
+                    <>
+                      <Send className="mr-2.5 h-6 w-6" /> {t('supportSubmitButton')}
+                    </>
+                )}
+              </Button>
+            </form>
+          </Form>
+          
+          {currentUser && (
+            <>
+              <Separator className="my-8" />
+              <div className="space-y-4">
+                <h3 className="text-xl font-semibold text-foreground flex items-center">
+                  <History className="w-6 h-6 text-accent me-2" />
+                  {t('supportPreviousRequestsTitle')}
+                </h3>
+                {isLoadingTickets ? (
+                  <div className="text-center text-muted-foreground flex items-center justify-center gap-2 py-4">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    {t('supportLoadingTickets')}
+                  </div>
+                ) : fetchError ? (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>{t('error')}</AlertTitle>
+                    <AlertDescription>{fetchError}</AlertDescription>
+                  </Alert>
+                ) : tickets.length > 0 ? (
+                  <Accordion type="multiple" className="w-full">
+                    {tickets.map((ticket) => (
+                      <AccordionItem value={ticket.id} key={ticket.id}>
+                        <AccordionTrigger className="text-base hover:bg-muted/50 px-3 py-3 rounded-md">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full text-left">
+                            <span className="font-medium text-foreground truncate max-w-[200px] sm:max-w-xs">{ticket.subject}</span>
+                            <div className="flex items-center gap-2 mt-1 sm:mt-0">
+                              <Badge variant={getStatusVariant(ticket.status)}>{getStatusLabel(ticket.status)}</Badge>
+                              <span className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(ticket.createdAt), { addSuffix: true, locale: dateLocale })}</span>
+                            </div>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-3 pt-2 pb-3 space-y-3 bg-background border-t">
+                          <div className="flex items-center gap-2 text-sm">
+                            <strong className="text-muted-foreground w-24 shrink-0">{t('supportTicketCategory')}:</strong>
+                            <span>{SUPPORT_CATEGORIES.find(c => c.value === ticket.category)?.label || ticket.category}</span>
+                          </div>
+                          <div className="flex flex-col gap-1 text-sm">
+                            <strong className="text-muted-foreground">{t('supportTicketDescription')}:</strong>
+                            <p className="p-3 bg-muted/50 rounded-md whitespace-pre-wrap text-foreground">{ticket.description}</p>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                ) : (
+                  <Alert variant="default" className="bg-secondary/30">
+                    <Ticket className="h-4 w-4 text-primary"/>
+                    <AlertTitle>{t('supportNoTickets')}</AlertTitle>
+                  </Alert>
+                )}
+              </div>
+            </>
           )}
+
         </CardContent>
         <CardFooter className="flex flex-col items-center p-6 bg-muted/30 border-t">
           <p className="text-sm text-muted-foreground mb-4 text-center max-w-sm">
@@ -248,5 +330,3 @@ export default function SupportPage() {
     </div>
   );
 }
-
-    

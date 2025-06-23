@@ -98,7 +98,7 @@ export interface Translations {
   wordsSetPreferencesPromptLinkText: string;
   wordsSetPreferencesPromptDescriptionPart2: string;
 
-  // New keys for full localization
+  // Keys for full localization
   dashboardTitle: string;
   dashboardStatTotalWords: string;
   dashboardStatTotalWordsDesc: string;
@@ -195,6 +195,17 @@ export interface Translations {
   supportToastSuccessTitle: string;
   supportToastSuccessDescription: string;
   supportToastErrorTitle: string;
+  supportPreviousRequestsTitle: string;
+  supportLoadingTickets: string;
+  supportNoTickets: string;
+  supportTicketStatus: string;
+  supportTicketDate: string;
+  supportTicketCategory: string;
+  supportTicketDescription: string;
+  supportStatusOpen: string;
+  supportStatusInProgress: string;
+  supportStatusResolved: string;
+  supportStatusClosed: string;
 
   donateTitle: string;
   donateDescription: string;
@@ -304,7 +315,6 @@ export const translations: Record<"en" | "ar", Translations> = {
     wordsSetPreferencesPromptDescriptionPart1: "Please set your preferred target language and field of knowledge in the",
     wordsSetPreferencesPromptLinkText: "Settings page",
     wordsSetPreferencesPromptDescriptionPart2: "before generating word sets.",
-    // New Keys
     dashboardTitle: "Learning Dashboard",
     dashboardStatTotalWords: "Total Words Learned",
     dashboardStatTotalWordsDesc: "Unique words from generated sets.",
@@ -396,6 +406,17 @@ export const translations: Record<"en" | "ar", Translations> = {
     supportToastSuccessTitle: "Request Submitted!",
     supportToastSuccessDescription: "Your support request has been sent successfully.",
     supportToastErrorTitle: "Submission Failed",
+    supportPreviousRequestsTitle: "Your Previous Support Requests",
+    supportLoadingTickets: "Loading your tickets...",
+    supportNoTickets: "You haven't submitted any support requests yet.",
+    supportTicketStatus: "Status",
+    supportTicketDate: "Submitted",
+    supportTicketCategory: "Category",
+    supportTicketDescription: "Your Message",
+    supportStatusOpen: "Open",
+    supportStatusInProgress: "In Progress",
+    supportStatusResolved: "Resolved",
+    supportStatusClosed: "Closed",
     donateTitle: "Support LinguaLeap",
     donateDescription: "Your contribution empowers us to enhance LinguaLeap and help learners worldwide. Every donation makes a difference.",
     donateNoteTitle: "Important Note",
@@ -502,7 +523,6 @@ export const translations: Record<"en" | "ar", Translations> = {
     wordsSetPreferencesPromptDescriptionPart1: "يرجى تعيين لغتك المستهدفة ومجال المعرفة المفضل في",
     wordsSetPreferencesPromptLinkText: "صفحة الإعدادات",
     wordsSetPreferencesPromptDescriptionPart2: "قبل إنشاء مجموعات الكلمات.",
-    // New Keys - Arabic
     dashboardTitle: "لوحة تحكم التعلم",
     dashboardStatTotalWords: "إجمالي الكلمات المكتسبة",
     dashboardStatTotalWordsDesc: "كلمات فريدة من المجموعات التي تم إنشاؤها.",
@@ -594,6 +614,17 @@ export const translations: Record<"en" | "ar", Translations> = {
     supportToastSuccessTitle: "تم إرسال الطلب!",
     supportToastSuccessDescription: "تم إرسال طلب الدعم الخاص بك بنجاح.",
     supportToastErrorTitle: "فشل الإرسال",
+    supportPreviousRequestsTitle: "طلبات الدعم السابقة",
+    supportLoadingTickets: "جاري تحميل تذاكرك...",
+    supportNoTickets: "لم تقم بتقديم أي طلبات دعم بعد.",
+    supportTicketStatus: "الحالة",
+    supportTicketDate: "تاريخ الإرسال",
+    supportTicketCategory: "الفئة",
+    supportTicketDescription: "رسالتك",
+    supportStatusOpen: "مفتوح",
+    supportStatusInProgress: "قيد المعالجة",
+    supportStatusResolved: "تم الحل",
+    supportStatusClosed: "مغلق",
     donateTitle: "ادعم LinguaLeap",
     donateDescription: "مساهمتك تمكننا من تحسين LinguaLeap ومساعدة المتعلمين في جميع أنحاء العالم. كل تبرع يحدث فرقًا.",
     donateNoteTitle: "ملاحظة هامة",
@@ -611,5 +642,3 @@ export const translations: Record<"en" | "ar", Translations> = {
     donateToastThankYouDescription: ({ amount }) => `نقدر تبرعك السخي بمبلغ ${amount}$. (هذا إجراء نائب)`,
   },
 };
-
-    
