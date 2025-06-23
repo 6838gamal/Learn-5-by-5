@@ -51,6 +51,8 @@ export interface Translations {
   toastSettingsSavedDescriptionPremium: (replacements: { langLabel: string }) => string;
   toastPremiumLanguageTitle: string;
   toastPremiumLanguageDescription: string;
+  toastAccessibilityUnderDevelopmentTitle: string;
+  toastAccessibilityUnderDevelopmentDescription: string;
   // Other
   loading: string;
   loginRequiredTitle: string;
@@ -279,6 +281,8 @@ export const translations: Record<"en" | "ar", Translations> = {
     toastSettingsSavedDescriptionPremium: ({ langLabel }) => `${langLabel} is a premium feature. Please upgrade to use it as your display language. Your preference has been saved, but the interface language will not change yet.`,
     toastPremiumLanguageTitle: "Feature in Development",
     toastPremiumLanguageDescription: "Support for this language is coming soon! Your selection has not been changed.",
+    toastAccessibilityUnderDevelopmentTitle: "Feature in Development",
+    toastAccessibilityUnderDevelopmentDescription: "Enhanced accessibility sections for deaf and hard-of-hearing users are under development. Your preference has been saved.",
     loading: "Loading...",
     loginRequiredTitle: "Login Required",
     loginRequiredDescription: "Please log in to access this page.",
@@ -493,6 +497,8 @@ export const translations: Record<"en" | "ar", Translations> = {
     toastSettingsSavedDescriptionPremium: ({ langLabel }) => `${langLabel} هي ميزة مميزة. يرجى الترقية لاستخدامها كلغة عرض. تم حفظ تفضيلك، لكن لغة الواجهة لن تتغير بعد.`,
     toastPremiumLanguageTitle: "ميزة قيد التطوير",
     toastPremiumLanguageDescription: "دعم هذه اللغة سيأتي قريبًا! لم يتم تغيير اختيارك الحالي.",
+    toastAccessibilityUnderDevelopmentTitle: "ميزة قيد التطوير",
+    toastAccessibilityUnderDevelopmentDescription: "الأقسام المخصصة للصم وضعاف السمع قيد التطوير. تم حفظ تفضيلك.",
     loading: "جاري التحميل...",
     loginRequiredTitle: "تسجيل الدخول مطلوب",
     loginRequiredDescription: "يرجى تسجيل الدخول للوصول إلى هذه الصفحة.",

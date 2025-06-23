@@ -100,6 +100,14 @@ export default function SettingsPage() {
     }
   };
 
+  const handleAccessibilityChange = (checked: boolean) => {
+    setPendingEnableAccessibilityAids(checked);
+    toast({
+      title: t('toastAccessibilityUnderDevelopmentTitle'),
+      description: t('toastAccessibilityUnderDevelopmentDescription'),
+    });
+  };
+
   const handleSaveSettings = async () => {
     if (!currentUser) {
       toast({ variant: "destructive", title: "Not Authenticated", description: "You must be logged in to save settings." });
@@ -316,7 +324,7 @@ export default function SettingsPage() {
               <Checkbox 
                 id="enable-accessibility-aids" 
                 checked={pendingEnableAccessibilityAids}
-                onCheckedChange={(checked) => setPendingEnableAccessibilityAids(checked as boolean)}
+                onCheckedChange={(checked) => handleAccessibilityChange(checked as boolean)}
                 disabled={isSaving}
               />
               <Label htmlFor="enable-accessibility-aids" className="text-base font-normal">
