@@ -54,6 +54,7 @@ import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { useLocalization } from "@/hooks/useLocalization"; // Import the hook
+import { ar as arLocale, enUS as enLocale } from 'date-fns/locale';
 
 export default function LearnClientPage() {
   const [generatedWordEntries, setGeneratedWordEntries] = useState<WordEntry[]>([]);
@@ -64,7 +65,8 @@ export default function LearnClientPage() {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const router = useRouter();
-  const { t } = useLocalization(); // Use the localization hook
+  const { t, language: currentLang } = useLocalization(); // Use the localization hook
+  const dateLocale = currentLang === 'ar' ? arLocale : enLocale;
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   const [carouselApi, setCarouselApi] = React.useState<CarouselApi>()
@@ -256,7 +258,7 @@ export default function LearnClientPage() {
   
   const handlePlayAudio = async (text: string | null) => {
     if (!text) return;
-    if (audioLoading) return; // Prevent multiple requests at once
+    if (audioLoading) return; // Prevent multiple requests
 
     setAudioLoading(text);
     try {
@@ -264,24 +266,36 @@ export default function LearnClientPage() {
       if (result.audioDataUri) {
         const audio = new Audio(result.audioDataUri);
         audio.play();
+        // Set loading to null only after audio finishes or errors
+        audio.onended = () => setAudioLoading(null);
+        audio.onerror = (e) => {
+          console.error("Audio playback error:", e);
+          toast({
+            variant: "destructive",
+            title: "Playback Error",
+            description: "Failed to play the generated audio.",
+          });
+          setAudioLoading(null);
+        };
       } else {
         toast({
           variant: "destructive",
           title: "Audio Generation Failed",
           description: result.error || "Could not generate audio for the selected text.",
         });
+        setAudioLoading(null); // Reset loading state on generation failure
       }
     } catch (e) {
-      console.error("Failed to play audio:", e);
+      console.error("Failed to generate or play audio:", e);
       toast({
         variant: "destructive",
         title: "Playback Error",
         description: "An unexpected error occurred while trying to play the audio.",
       });
-    } finally {
-      setAudioLoading(null);
+      setAudioLoading(null); // Reset loading state on catch
     }
   };
+
 
   const handleGoToHome = () => router.push("/");
   
@@ -391,7 +405,7 @@ export default function LearnClientPage() {
                 {previousWordSets.map((set, index) => (
                   <AccordionItem value={`item-${index}`} key={set.id || index}>
                     <AccordionTrigger className="text-base hover:bg-muted/50 px-3 py-3 rounded-md">
-                        {t('wordsAccordionTriggerLabel', { date: formatDistanceToNow(new Date(set.timestamp), { addSuffix: true }), count: set.wordEntries.length })}
+                        {t('wordsAccordionTriggerLabel', { date: formatDistanceToNow(new Date(set.timestamp), { addSuffix: true, locale: dateLocale }), count: set.wordEntries.length })}
                     </AccordionTrigger>
                     <AccordionContent className="px-3 pt-2 pb-3">
                       <ScrollArea className="h-48 w-full rounded-md border p-3 bg-background">
