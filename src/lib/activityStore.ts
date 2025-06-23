@@ -1,4 +1,3 @@
-
 // src/lib/activityStore.ts
 
 // NOTE: With the introduction of Firestore for logged-in users, 
@@ -28,6 +27,7 @@ export interface ConversationActivityRecord {
   id: string;
   type: 'conversation';
   language: string;
+  field: string;
   selectedWords: string[];
   conversation: string;
   timestamp: number;
@@ -79,17 +79,17 @@ export function addWordSetActivity(language: string, field: string, wordEntries:
  * Adds a conversation activity to localStorage.
  * Primarily for non-logged-in users or as a fallback.
  */
-export function addConversationActivity(language: string, selectedWords: string[], conversation: string): ConversationActivityRecord {
+export function addConversationActivity(language: string, field: string, selectedWords: string[], conversation: string): ConversationActivityRecord {
    if (typeof window === "undefined") {
     const placeholderRecord: ConversationActivityRecord = {
-      id: generateUniqueId(), type: 'conversation', language, selectedWords, conversation, timestamp: Date.now(),
+      id: generateUniqueId(), type: 'conversation', language, field, selectedWords, conversation, timestamp: Date.now(),
     };
     console.warn("addConversationActivity (local) called server-side.");
     return placeholderRecord;
   }
   const activityData = getActivityData();
   const newRecord: ConversationActivityRecord = {
-    id: generateUniqueId(), type: 'conversation', language, selectedWords, conversation, timestamp: Date.now(),
+    id: generateUniqueId(), type: 'conversation', language, field, selectedWords, conversation, timestamp: Date.now(),
   };
   activityData.learnedItems.unshift(newRecord);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(activityData));
@@ -128,6 +128,7 @@ export function getActivityData(): ActivityData {
           if (item.type === 'conversation') {
              return {
                 ...item,
+                field: (item as ConversationActivityRecord).field || "daily_conversation", // Default for old records
                 selectedWords: Array.isArray((item as ConversationActivityRecord).selectedWords) ? (item as ConversationActivityRecord).selectedWords : [],
                 conversation: (item as ConversationActivityRecord).conversation || "",
              } as ConversationActivityRecord;

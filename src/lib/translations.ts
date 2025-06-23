@@ -1,4 +1,3 @@
-
 // src/lib/translations.ts
 
 export interface Translations {
@@ -64,7 +63,7 @@ export interface Translations {
   conversationsGeneratingButton: string;
   conversationsErrorSelectWords: string;
   conversationsGeneratedTitle: string;
-  conversationsAlertNoWords: (replacements: { langLabel: string }) => string;
+  conversationsAlertNoWords: (replacements: { langLabel: string, fieldLabel: string }) => string;
   conversationsAlertGoToWords: string;
   conversationsPreviousTitle: string;
   conversationsAccordionTriggerLabel: (replacements: { date: string; words: string }) => string;
@@ -281,18 +280,18 @@ export const translations: Record<"en" | "ar", Translations> = {
     goToLoginButton: "Go to Login",
     error: "Error",
     conversationsTitle: "Create a Conversation",
-    conversationsDescription: "Select a language and some words you've learned to generate a practice conversation.",
+    conversationsDescription: "Select some words you've learned to generate a practice conversation.",
     conversationsSelectLanguageLabel: "Select Language:",
     conversationsSelectWordsLabel: "Select Words (min. 2):",
     conversationsGenerateButton: "Generate Conversation",
     conversationsGeneratingButton: "Generating...",
-    conversationsErrorSelectWords: "Please select a language and at least two words.",
+    conversationsErrorSelectWords: "Please select at least two words.",
     conversationsGeneratedTitle: "Generated Conversation:",
-    conversationsAlertNoWords: ({ langLabel }) => `You haven't generated any words in ${langLabel} yet.`,
+    conversationsAlertNoWords: ({ langLabel, fieldLabel }) => `You haven't learned any words for ${langLabel} in the '${fieldLabel}' category yet. Go to the`,
     conversationsAlertGoToWords: "Words section",
     conversationsPreviousTitle: "Previously Generated Conversations",
     conversationsAccordionTriggerLabel: ({ date, words }) => `Conversation from ${date} with: ${words}...`,
-    conversationsAlertNoHistory: "No previously generated conversations found for this language.",
+    conversationsAlertNoHistory: "No previously generated conversations found for this language and field.",
     conversationsAlertNoHistoryTitle: "No History Yet",
     wordsTitle: "Word Learning Sets",
     wordsGeneratingForLabel: ({ lang, field }) => `Generating words for: ${lang} in ${field}.`,
@@ -362,7 +361,7 @@ export const translations: Record<"en" | "ar", Translations> = {
     dashboardChartMetricSets: "Sets",
     dashboardChartLabelCount: "Count",
     soundsTitle: ({ language }) => `Sounds in ${language}`,
-    soundsDescription: ({ field }) => `Practice sounds for ${field}. Click speaker icons to hear words/sentences (feature coming soon).`,
+    soundsDescription: ({ field }) => `Practice sounds for ${field}. Click speaker icons to hear words/sentences.`,
     soundsLoadingPreferences: "Loading your preferences...",
     soundsPracticeTipTitle: "Practice Tip",
     soundsPracticeTipDescription: "Listen carefully. Try to repeat aloud. Generate more in the",
@@ -493,18 +492,18 @@ export const translations: Record<"en" | "ar", Translations> = {
     goToLoginButton: "الذهاب إلى تسجيل الدخول",
     error: "خطأ",
     conversationsTitle: "إنشاء محادثة",
-    conversationsDescription: "اختر لغة وبعض الكلمات التي تعلمتها لإنشاء محادثة تدريبية.",
+    conversationsDescription: "اختر بعض الكلمات التي تعلمتها لإنشاء محادثة تدريبية.",
     conversationsSelectLanguageLabel: "اختر اللغة:",
     conversationsSelectWordsLabel: "اختر الكلمات (2 على الأقل):",
     conversationsGenerateButton: "إنشاء محادثة",
     conversationsGeneratingButton: "جاري الإنشاء...",
-    conversationsErrorSelectWords: "يرجى اختيار لغة وكلمتين على الأقل.",
+    conversationsErrorSelectWords: "يرجى اختيار كلمتين على الأقل.",
     conversationsGeneratedTitle: "المحادثة التي تم إنشاؤها:",
-    conversationsAlertNoWords: ({ langLabel }) => `لم تقم بتوليد أي كلمات باللغة ${langLabel} بعد.`,
+    conversationsAlertNoWords: ({ langLabel, fieldLabel }) => `لم تتعلم أي كلمات للغة ${langLabel} في فئة '${fieldLabel}' بعد. يرجى الذهاب إلى`,
     conversationsAlertGoToWords: "قسم الكلمات",
     conversationsPreviousTitle: "المحادثات التي تم إنشاؤها سابقا",
     conversationsAccordionTriggerLabel: ({ date, words }) => `محادثة من ${date} باستخدام: ${words}...`,
-    conversationsAlertNoHistory: "لم يتم العثور على محادثات تم إنشاؤها سابقا لهذه اللغة.",
+    conversationsAlertNoHistory: "لم يتم العثور على محادثات تم إنشاؤها سابقا لهذه اللغة وهذا المجال.",
     conversationsAlertNoHistoryTitle: "لا يوجد سجل حتى الآن",
     wordsTitle: "مجموعات تعلم الكلمات",
     wordsGeneratingForLabel: ({ lang, field }) => `جاري توليد كلمات لـ: ${lang} في ${field}.`,
@@ -574,7 +573,7 @@ export const translations: Record<"en" | "ar", Translations> = {
     dashboardChartMetricSets: "مجموعات",
     dashboardChartLabelCount: "العدد",
     soundsTitle: ({ language }) => `الأصوات في ${language}`,
-    soundsDescription: ({ field }) => `تدرب على الأصوات لـ ${field}. انقر على أيقونات السماعة لسماع الكلمات/الجمل (ميزة قادمة قريبًا).`,
+    soundsDescription: ({ field }) => `تدرب على الأصوات لـ ${field}. انقر على أيقونات السماعة لسماع الكلمات/الجمل.`,
     soundsLoadingPreferences: "جاري تحميل تفضيلاتك...",
     soundsPracticeTipTitle: "نصيحة للممارسة",
     soundsPracticeTipDescription: "استمع بعناية. حاول التكرار بصوت عالٍ. قم بإنشاء المزيد في قسم",

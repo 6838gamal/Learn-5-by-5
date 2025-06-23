@@ -81,6 +81,7 @@ export async function handleGenerateWordSet(
 
 const ConversationActionInputSchema = z.object({
   language: z.string().describe('The language for the conversation.'),
+  field: z.string().min(1, "Field is required."),
   selectedWords: z.array(z.string()).min(2, "Please select at least two words.").describe('A list of words to include in the conversation.'),
 });
 
@@ -89,6 +90,7 @@ export interface GenerateConversationActionResult {
   conversation?: string;
   error?: string;
   language?: string; 
+  field?: string;
   selectedWords?: string[]; 
 }
 
@@ -106,6 +108,7 @@ export async function handleGenerateConversation(
       return { 
         conversation: result.conversation, 
         language: validatedData.language, 
+        field: validatedData.field,
         selectedWords: validatedData.selectedWords 
       };
     }
@@ -176,6 +179,7 @@ export async function logWordSetActivityAction(data: LogWordSetActivityInput): P
 const LogConversationActivityInputSchema = z.object({
   userId: z.string().min(1, "User ID is required."),
   language: z.string().min(1, "Language is required."),
+  field: z.string().min(1, "Field is required."),
   selectedWords: z.array(z.string()).min(2, "At least two words are required."),
   conversation: z.string().min(1, "Conversation script is required."),
 });
@@ -187,6 +191,7 @@ export async function logConversationActivityAction(data: LogConversationActivit
     const activityToSave: Omit<ConversationActivityRecord, 'id' | 'timestamp'> = {
       type: 'conversation',
       language: validatedData.language,
+      field: validatedData.field,
       selectedWords: validatedData.selectedWords,
       conversation: validatedData.conversation,
     };

@@ -15,7 +15,7 @@ import {
   type WordSetActivityRecord,
   type ConversationActivityRecord
 } from "@/lib/activityStore";
-import { TARGET_LANGUAGES } from "@/constants/data";
+import { TARGET_LANGUAGES, TARGET_FIELDS } from "@/constants/data";
 import { 
   handleGenerateConversation, 
   handleGenerateAudio,
@@ -23,7 +23,7 @@ import {
   logConversationActivityAction,
   fetchUserActivitiesAction 
 } from "@/app/actions";
-import { getTargetLanguageSettingAction } from '@/app/settingsActions';
+import { getTargetLanguageSettingAction, getTargetFieldSettingAction } from '@/app/settingsActions';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase';
@@ -40,6 +40,7 @@ export default function ConversationsPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   
   const [settingsTargetLanguage, setSettingsTargetLanguage] = useState<string | undefined>();
+  const [settingsTargetField, setSettingsTargetField] = useState<string | undefined>();
   const [isSettingsLoading, setIsSettingsLoading] = useState(true);
   const [isDataLoading, setIsDataLoading] = useState(true);
 
@@ -63,22 +64,27 @@ export default function ConversationsPage() {
       setIsSettingsLoading(true);
       if (user) {
         try {
-          const targetLang = await getTargetLanguageSettingAction(user.uid);
+          const [targetLang, targetField] = await Promise.all([
+            getTargetLanguageSettingAction(user.uid),
+            getTargetFieldSettingAction(user.uid)
+          ]);
           setSettingsTargetLanguage(targetLang);
+          setSettingsTargetField(targetField);
         } catch (e) {
           console.error("Failed to load user settings for Conversations page:", e);
           toast({ variant: "destructive", title: t('error'), description: "Could not load settings" });
         }
       } else {
         setSettingsTargetLanguage(undefined);
+        setSettingsTargetField(undefined);
       }
       setIsSettingsLoading(false);
     });
     return () => unsubscribe();
   }, [toast, t]);
 
-  const loadPageData = useCallback(async (language: string, user: User | null) => {
-    if (!isClient || !language) {
+  const loadPageData = useCallback(async (language: string, field: string, user: User | null) => {
+    if (!isClient || !language || !field) {
       setLanguageWords([]);
       setSelectedWords([]);
       setPreviousConversations([]);
@@ -95,9 +101,9 @@ export default function ConversationsPage() {
       if (result.activities) {
         result.activities.forEach(record => {
           if (record.language === language) {
-            if (record.type === 'wordSet') {
+            if (record.type === 'wordSet' && (record as WordSetActivityRecord).field === field) {
               (record as WordSetActivityRecord).wordEntries.forEach(entry => wordsSet.add(entry.word));
-            } else if (record.type === 'conversation') {
+            } else if (record.type === 'conversation' && (record as ConversationActivityRecord).field === field) {
               conversations.push(record as ConversationActivityRecord);
             }
           }
@@ -105,19 +111,18 @@ export default function ConversationsPage() {
       } else if (result.error) {
         setError("Could not load your learned words and conversations. Using local data if available.");
       }
-    } else if (auth.app.options.apiKey !== "YOUR_API_KEY_HERE") {
+    } else if (auth.app.options.apiKey === "YOUR_API_KEY_HERE") {
         // No data for non-logged in users when Firebase is configured
-    } else { 
-      const activityData = getActivityDataLocal();
-      activityData.learnedItems.forEach(record => {
-        if (record.language === language) {
-          if (record.type === 'wordSet') {
-            (record as WordSetActivityRecord).wordEntries.forEach(entry => wordsSet.add(entry.word));
-          } else if (record.type === 'conversation') {
-            conversations.push(record as ConversationActivityRecord);
+        const activityData = getActivityDataLocal();
+        activityData.learnedItems.forEach(record => {
+          if (record.language === language) {
+            if (record.type === 'wordSet' && (record as WordSetActivityRecord).field === field) {
+              (record as WordSetActivityRecord).wordEntries.forEach(entry => wordsSet.add(entry.word));
+            } else if (record.type === 'conversation' && (record as ConversationActivityRecord).field === field) {
+              conversations.push(record as ConversationActivityRecord);
+            }
           }
-        }
-      });
+        });
     }
 
     setLanguageWords(Array.from(wordsSet).sort());
@@ -129,14 +134,14 @@ export default function ConversationsPage() {
   }, [isClient]);
 
   useEffect(() => {
-    if (isClient && !isSettingsLoading && settingsTargetLanguage) {
-        loadPageData(settingsTargetLanguage, currentUser);
-    } else if (isClient && !isSettingsLoading && !settingsTargetLanguage) {
+    if (isClient && !isSettingsLoading && settingsTargetLanguage && settingsTargetField) {
+        loadPageData(settingsTargetLanguage, settingsTargetField, currentUser);
+    } else if (isClient && !isSettingsLoading) {
         setLanguageWords([]);
         setPreviousConversations([]);
         setIsDataLoading(false);
     }
-  }, [isClient, isSettingsLoading, settingsTargetLanguage, currentUser, loadPageData]);
+  }, [isClient, isSettingsLoading, settingsTargetLanguage, settingsTargetField, currentUser, loadPageData]);
 
 
   const handleWordSelection = (word: string) => {
@@ -146,7 +151,7 @@ export default function ConversationsPage() {
   };
 
   const onGenerateConversation = async () => {
-    if (!settingsTargetLanguage || selectedWords.length < 2) {
+    if (!settingsTargetLanguage || !settingsTargetField || selectedWords.length < 2) {
       setError(t('conversationsErrorSelectWords'));
       return;
     }
@@ -156,12 +161,13 @@ export default function ConversationsPage() {
 
     const result: GenerateConversationActionResult = await handleGenerateConversation({
       language: settingsTargetLanguage,
+      field: settingsTargetField,
       selectedWords: selectedWords,
     });
 
     setIsLoadingConversation(false);
 
-    if (result.conversation && result.language && result.selectedWords) {
+    if (result.conversation && result.language && result.selectedWords && result.field) {
       const newConversation = result.conversation;
       setGeneratedConversation(newConversation);
       toast({ title: t('toastSettingsSavedTitle'), description: "Your new conversation is ready." });
@@ -170,6 +176,7 @@ export default function ConversationsPage() {
         id: Date.now().toString(),
         type: 'conversation',
         language: result.language,
+        field: result.field,
         selectedWords: result.selectedWords,
         conversation: newConversation,
         timestamp: Date.now()
@@ -181,6 +188,7 @@ export default function ConversationsPage() {
         const logResult = await logConversationActivityAction({
           userId: currentUser.uid,
           language: result.language,
+          field: result.field,
           selectedWords: result.selectedWords,
           conversation: newConversation,
         });
@@ -188,7 +196,7 @@ export default function ConversationsPage() {
           toast({ variant: "destructive", title: "Logging Failed", description: "Could not save conversation to your account."});
         }
       } else if (auth.app.options.apiKey === "YOUR_API_KEY_HERE"){
-         addConversationActivityLocal(result.language, result.selectedWords, newConversation);
+         addConversationActivityLocal(result.language, result.field, result.selectedWords, newConversation);
          toast({ title: "Activity Saved Locally", description: "Log in to save progress to your account."});
       }
     } else if (result.error) {
@@ -220,8 +228,13 @@ export default function ConversationsPage() {
   
   const targetLanguageLabel = useMemo(() => {
       const lang = TARGET_LANGUAGES.find(l => l.value === settingsTargetLanguage);
-      return lang ? `${lang.emoji} ${lang.label}` : settingsTargetLanguage;
+      return lang ? lang.label : settingsTargetLanguage;
   }, [settingsTargetLanguage]);
+
+  const targetFieldLabel = useMemo(() => {
+    const field = TARGET_FIELDS.find(f => f.value === settingsTargetField);
+    return field ? field.label : settingsTargetField;
+  }, [settingsTargetField]);
 
   if (!isClient || isSettingsLoading) { 
     return (
@@ -259,7 +272,7 @@ export default function ConversationsPage() {
     );
   }
 
-  if (!isSettingsLoading && !settingsTargetLanguage) {
+  if (!isSettingsLoading && (!settingsTargetLanguage || !settingsTargetField)) {
     return (
       <div className="container mx-auto py-8 px-4">
         <Card className="w-full max-w-lg mx-auto shadow-xl">
@@ -292,7 +305,7 @@ export default function ConversationsPage() {
           <CardDescription className="text-lg mt-1">
             {t('conversationsDescription')}
             <br />
-            Practicing in: <strong className="text-primary">{targetLanguageLabel}</strong>.
+            Practicing in: <strong className="text-primary">{targetLanguageLabel} - {targetFieldLabel}</strong>.
              {currentUser && (
                 <Link href="/settings" className="text-sm underline text-primary hover:text-accent ml-1">({t('wordsChangePreferencesLink')})</Link>
             )}
@@ -332,7 +345,7 @@ export default function ConversationsPage() {
                    <AlertTriangle className="h-4 w-4 text-primary" />
                   <AlertTitle>No Words Yet</AlertTitle>
                   <AlertDescription>
-                    {t('conversationsAlertNoWords', { langLabel: targetLanguageLabel || settingsTargetLanguage || ''})}
+                    {t('conversationsAlertNoWords', { langLabel: targetLanguageLabel || '', fieldLabel: targetFieldLabel || '' })}
                     <Link href="/words" className="underline hover:text-primary font-medium ml-1">{t('conversationsAlertGoToWords')}</Link>!
                   </AlertDescription>
                 </Alert>
@@ -342,7 +355,7 @@ export default function ConversationsPage() {
 
           <Button
             onClick={onGenerateConversation}
-            disabled={isLoadingConversation || !settingsTargetLanguage || selectedWords.length < 2 || isDataLoading || isSettingsLoading}
+            disabled={isLoadingConversation || !settingsTargetLanguage || !settingsTargetField || selectedWords.length < 2 || isDataLoading || isSettingsLoading}
             className="w-full bg-accent hover:bg-accent/90 text-accent-foreground text-lg py-3"
           >
             {isLoadingConversation ? (

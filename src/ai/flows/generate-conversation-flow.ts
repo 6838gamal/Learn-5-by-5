@@ -13,6 +13,7 @@ import {z} from 'genkit';
 
 const GenerateConversationInputSchema = z.object({
   language: z.string().describe('The language for the conversation.'),
+  field: z.string().describe('The field of knowledge for the context of the conversation.'),
   selectedWords: z.array(z.string()).min(2, "Please select at least two words.").describe('A list of words to include in the conversation.'),
 });
 export type GenerateConversationInput = z.infer<typeof GenerateConversationInputSchema>;
@@ -32,7 +33,7 @@ const prompt = ai.definePrompt({
   input: {schema: GenerateConversationInputSchema},
   output: {schema: GenerateConversationOutputSchema},
   prompt: `You are a language learning assistant.
-Create a short, natural-sounding dialogue in {{language}} between two people (Person A and Person B).
+Create a short, natural-sounding dialogue in {{language}} between two people (Person A and Person B) about the topic of {{field}}.
 The dialogue MUST meaningfully incorporate and use ALL of the following words:
 {{#each selectedWords}}
 - {{{this}}}
