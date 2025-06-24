@@ -9,9 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Mail, ArrowLeft } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle, CheckCircle } from "lucide-react";
+import { auth } from "@/lib/firebase";
+import { useLocalization } from "@/hooks/useLocalization";
 
 const forgotPasswordSchema = z.object({
   email: z.string().email("Invalid email address.").min(1, "Email is required."),
@@ -23,6 +25,12 @@ export default function ForgotPasswordForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const { language } = useLocalization();
+
+  // Set auth language from context for emails
+  useEffect(() => {
+    auth.languageCode = language;
+  }, [language]);
 
   const form = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),

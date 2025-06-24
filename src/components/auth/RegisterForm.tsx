@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -8,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Mail, Lock, User, ChromeIcon } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -18,9 +19,9 @@ import {
   GoogleAuthProvider, 
   signInWithPopup, 
   createUserWithEmailAndPassword,
-  updateProfile,
-  type UserCredential 
+  updateProfile
 } from 'firebase/auth';
+import { useLocalization } from "@/hooks/useLocalization";
 
 const registerFormSchema = z.object({
   name: z.string().min(1, "Name is required."),
@@ -39,6 +40,12 @@ export default function RegisterForm() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const { toast } = useToast();
+  const { language } = useLocalization();
+
+  // Set auth language from context for emails
+  useEffect(() => {
+    auth.languageCode = language;
+  }, [language]);
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerFormSchema),
@@ -85,8 +92,19 @@ export default function RegisterForm() {
     const provider = new GoogleAuthProvider(); 
     
     try {
-      const result: UserCredential = await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      
+      // This gives you a Google Access Token. You can use it to access the Google API.
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      if (credential) {
+        const token = credential.accessToken;
+        // You can now use the token to access Google APIs.
+        console.log("Google Access Token:", token);
+      }
+      
+      // The signed-in user info.
       const user = result.user;
+      
       console.log(`${providerName} signup successful:`, user);
       toast({
         title: "Sign Up Successful",
@@ -94,24 +112,33 @@ export default function RegisterForm() {
       });
       router.push('/'); 
     } catch (e: any) {
-      console.error(`${providerName} signup error:`, e);
-      let errorMessage = "An unexpected error occurred during social signup.";
-      if (e.code === 'auth/operation-not-allowed') {
-        errorMessage = "Google Sign-In is not enabled for this project. \n\nTo fix this: \n1. Go to your Firebase Console. \n2. Navigate to Authentication > Sign-in method. \n3. Find 'Google' in the list of providers and enable it.";
-      } else if (e.code === 'auth/account-exists-with-different-credential') {
-        errorMessage = "An account already exists with the same email. Try signing in with the original method.";
-      } else if (e.code === 'auth/popup-closed-by-user') {
-        errorMessage = "Signup cancelled. The sign-in popup was closed.";
-      } else if (e.code === 'auth/cancelled-popup-request') {
-        errorMessage = "Signup cancelled. Multiple popup requests were made.";
-      } else if (e.code === 'auth/network-request-failed') {
-        errorMessage = "Network error. Please check your internet connection.";
-      } else if (e.code === 'auth/invalid-app-id') {
-         errorMessage = "Configuration Error: Invalid App ID for Google Sign-In. Please check the following: \n1. The `appId` in `src/lib/firebase.ts` must exactly match the Web App ID from your Firebase project settings. \n2. The Google Sign-In provider must be enabled in the Firebase Console. \n3. Ensure your project's support email is set in the Firebase Console (Project settings > General).";
-      } else if (e.code) {
-        errorMessage = e.message;
+      // Handle Errors here.
+      const errorCode = e.code;
+      const errorMessage = e.message;
+      // The email of the user's account used.
+      const email = e.customData?.email;
+      // The AuthCredential type that was used.
+      const credential = GoogleAuthProvider.credentialFromError(e);
+
+      console.error(`${providerName} signup error:`, { errorCode, errorMessage, email, credential });
+
+      let displayErrorMessage = "An unexpected error occurred during social signup.";
+      if (errorCode === 'auth/operation-not-allowed') {
+        displayErrorMessage = "Google Sign-In is not enabled for this project. \n\nTo fix this: \n1. Go to your Firebase Console. \n2. Navigate to Authentication > Sign-in method. \n3. Find 'Google' in the list of providers and enable it.";
+      } else if (errorCode === 'auth/account-exists-with-different-credential') {
+        displayErrorMessage = "An account already exists with the same email. Try signing in with the original method.";
+      } else if (errorCode === 'auth/popup-closed-by-user') {
+        displayErrorMessage = "Signup cancelled. The sign-in popup was closed.";
+      } else if (errorCode === 'auth/cancelled-popup-request') {
+        displayErrorMessage = "Signup cancelled. Multiple popup requests were made.";
+      } else if (errorCode === 'auth/network-request-failed') {
+        displayErrorMessage = "Network error. Please check your internet connection.";
+      } else if (errorCode === 'auth/invalid-app-id') {
+         displayErrorMessage = "Configuration Error: Invalid App ID for Google Sign-In. Please check the following: \n1. The `appId` in `src/lib/firebase.ts` must exactly match the Web App ID from your Firebase project settings. \n2. The Google Sign-In provider must be enabled in the Firebase Console. \n3. Ensure your project's support email is set in the Firebase Console (Project settings > General).";
+      } else if (errorMessage) {
+        displayErrorMessage = errorMessage;
       }
-      setError(errorMessage);
+      setError(displayErrorMessage);
       toast({
         variant: "destructive",
         title: "Sign Up Failed",
