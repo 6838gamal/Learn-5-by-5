@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -13,6 +12,7 @@ import { useState, useEffect } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle, CheckCircle } from "lucide-react";
 import { auth } from "@/lib/firebase";
+import { sendPasswordResetEmail } from "firebase/auth"; // Import the function
 import { useLocalization } from "@/hooks/useLocalization";
 
 const forgotPasswordSchema = z.object({
@@ -44,16 +44,27 @@ export default function ForgotPasswordForm() {
     setError(null);
     setSuccessMessage(null);
 
-    // Placeholder for actual password reset logic
-    console.log("Password reset request for:", data.email);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      await sendPasswordResetEmail(auth, data.email);
+      setSuccessMessage("If an account with this email exists, a password reset link has been sent. Please check your inbox.");
+      form.reset();
+    } catch (e: any) {
+      // Firebase provides generic errors for password reset to prevent user enumeration.
+      // So we typically show a generic success message regardless, but for debugging we can show the error.
+      let errorMessage = "An error occurred. Please try again later.";
+      if (e.code === 'auth/invalid-email') {
+        errorMessage = "The email address is not valid.";
+      } else if (e.code) {
+        // For other Firebase errors, just show a generic message in production
+        // but the actual error message during development can be helpful.
+        console.error("Password Reset Error:", e);
+      }
+      setError(errorMessage);
+      // For a better user experience, you might still want to show the success message
+      // to prevent attackers from checking which emails are registered.
+      setSuccessMessage("If an account with this email exists, a password reset link has been sent. Please check your inbox.");
+    }
     
-    // Example error:
-    // setError("Could not find an account with that email address.");
-    // Example success:
-    setSuccessMessage("If an account with this email exists, a password reset link has been sent.");
-    form.reset(); // Reset form on success
     setIsLoading(false);
   }
 
