@@ -1,4 +1,3 @@
-
 // src/hooks/useLocalization.ts
 "use client";
 
@@ -24,10 +23,19 @@ export const useLocalization = (): UseLocalizationOutput => {
   const { language, direction, isInitialized } = context;
 
   const t = useCallback((key: keyof Translations, replacements?: Record<string, string | number>): string => {
-    let text = translations[language]?.[key] || translations.en[key] || key;
+    // Type guard to check if the current language is a valid key in our translations object
+    const isLangSupported = (lang: string): lang is keyof typeof translations => {
+      return lang in translations;
+    };
+
+    // Get translations for the current language, or fallback to English if not supported.
+    const selectedTranslations = isLangSupported(language) ? translations[language] : translations.en;
+    
+    // Get the specific text for the key, falling back to English if the key is missing in the selected language,
+    // and finally falling back to the key itself if it's not in English either.
+    let text = selectedTranslations[key] || translations.en[key] || key;
 
     if (typeof text === 'function') {
-        // Type assertion needed here because TS doesn't know 'text' is a function based on keyof Translations alone
         text = (text as (replacements: Record<string, string | number>) => string)(replacements || {});
     } else if (replacements) {
         Object.keys(replacements).forEach(placeholder => {
