@@ -63,10 +63,11 @@ export default function LoginForm() {
         errorMessage = "Invalid email or password. Please try again.";
       } else if (e.code === 'auth/network-request-failed') {
         errorMessage = "Network error. Please check your internet connection.";
+      } else if (e.code === 'auth/operation-not-allowed') {
+        errorMessage = "Email/Password sign-in is not enabled for this project. Please enable it in your Firebase Console under Authentication > Sign-in method.";
       } else if (e.code === 'auth/invalid-app-id') {
         errorMessage = "Configuration Error: Invalid App ID. Please verify your Firebase project settings.";
-      }
-      else if (e.message) {
+      } else if (e.message) {
         errorMessage = e.message;
       }
       setError(errorMessage);

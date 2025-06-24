@@ -10,7 +10,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyDeN1mxcNwQqOyBtLE2AgZoBzf5exPYBoc",
   authDomain: "learn-5-by-5.firebaseapp.com",
   projectId: "learn-5-by-5",
-  storageBucket: "learn-5-by-5.appspot.com", // Keeping the standard storage bucket format
+  storageBucket: "learn-5-by-5.firebasestorage.app", // Updated to match user-provided snippet
   messagingSenderId: "434056178407",
   appId: "1:434056178407:web:b530c6318de3bb58471042",
   measurementId: "G-DJRHLSN6TV"
