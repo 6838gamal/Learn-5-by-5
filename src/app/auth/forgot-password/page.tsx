@@ -11,7 +11,7 @@ export default function ForgotPasswordPage() {
           <KeyRound className="h-12 w-12 text-primary mb-3" />
           <CardTitle className="text-2xl font-bold text-primary">Forgot Your Password?</CardTitle>
           <CardDescription>
-            No worries! Enter your email address below and we&apos;ll send you a link to reset your password.
+            No worries! Enter your email address below and we&apos;ll send you a secure link to set a new password.
           </CardDescription>
         </CardHeader>
         <CardContent>

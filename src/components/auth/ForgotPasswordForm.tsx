@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -43,10 +44,11 @@ export default function ForgotPasswordForm() {
     setIsLoading(true);
     setError(null);
     setSuccessMessage(null);
+    const successMsg = "Check your inbox! If an account exists for that email, we've sent a secure link to reset your password.";
 
     try {
       await sendPasswordResetEmail(auth, data.email);
-      setSuccessMessage("If an account with this email exists, a password reset link has been sent. Please check your inbox.");
+      setSuccessMessage(successMsg);
       form.reset();
     } catch (e: any) {
       // Firebase provides generic errors for password reset to prevent user enumeration.
@@ -59,10 +61,10 @@ export default function ForgotPasswordForm() {
         // but the actual error message during development can be helpful.
         console.error("Password Reset Error:", e);
       }
-      setError(errorMessage);
-      // For a better user experience, you might still want to show the success message
+      // For a better user experience, show the success message anyway
       // to prevent attackers from checking which emails are registered.
-      setSuccessMessage("If an account with this email exists, a password reset link has been sent. Please check your inbox.");
+      setError(errorMessage); // Log the error for debugging but still show success UI.
+      setSuccessMessage(successMsg);
     }
     
     setIsLoading(false);
@@ -106,7 +108,7 @@ export default function ForgotPasswordForm() {
             {isLoading ? (
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground mr-2"></div>
             ) : null}
-            Send Reset Link
+            Send Password Reset Link
             </Button>
         )}
 
