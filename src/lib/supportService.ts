@@ -75,21 +75,32 @@ export async function getSupportTicketsFromFirestore(userId: string): Promise<Su
       orderBy('createdAt', 'desc')
     );
     const querySnapshot = await getDocs(q);
-    const tickets: SupportTicket[] = [];
-    querySnapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      const createdAt = (data.createdAt as Timestamp)?.toDate().getTime() || Date.now();
-      const updatedAt = (data.updatedAt as Timestamp)?.toDate().getTime();
-      tickets.push({
+    
+    return querySnapshot.docs.map((docSnap) => {
+      const data = docSnap.data() as Omit<SupportTicketFirestoreRecord, 'createdAt' | 'updatedAt'> & { createdAt: Timestamp | null, updatedAt: Timestamp | null };
+      
+      const createdAt = data.createdAt?.toDate().getTime() || Date.now();
+      const updatedAt = data.updatedAt?.toDate().getTime();
+
+      return {
         id: docSnap.id,
-        ...data,
+        userId: data.userId,
+        email: data.email,
+        subject: data.subject,
+        category: data.category,
+        description: data.description,
+        status: data.status,
         createdAt,
-        updatedAt
-      } as SupportTicket);
+        updatedAt,
+      };
     });
-    return tickets;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching support tickets from Firestore:', error);
-    throw new Error('Failed to fetch support tickets from the database.');
+    // Check for the specific error code or message for a missing index
+    if (error.code === 'failed-precondition' && error.message?.includes('requires an index')) {
+        const helpfulMessage = `A database index is required to fetch support tickets. This is a one-time setup. Please check your browser's developer console (F12). Firebase usually provides a direct link there to create the necessary index in your Firestore database. The query needs an index on 'userId' (ascending) and 'createdAt' (descending).`;
+        throw new Error(helpfulMessage);
+    }
+    throw new Error('Failed to fetch support tickets from the database. Please ensure Firestore is configured correctly.');
   }
 }
