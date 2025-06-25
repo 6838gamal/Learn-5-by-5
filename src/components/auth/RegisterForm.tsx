@@ -111,10 +111,10 @@ export default function RegisterForm() {
       console.error(`${providerName} signup error:`, e);
 
       let displayErrorMessage = "An unexpected error occurred during social signup.";
-      if (errorCode === 'auth/operation-not-allowed') {
+      if (errorCode === 'auth/account-exists-with-different-credential') {
+        displayErrorMessage = "An account with this email already exists. Please go to the login page and sign in.";
+      } else if (errorCode === 'auth/operation-not-allowed') {
         displayErrorMessage = "Google Sign-In is not enabled for this project. \n\nTo fix this: \n1. Go to your Firebase Console. \n2. Navigate to Authentication > Sign-in method. \n3. Find 'Google' in the list of providers and enable it.";
-      } else if (errorCode === 'auth/account-exists-with-different-credential') {
-        displayErrorMessage = "An account already exists with the same email. Try signing in with the original method.";
       } else if (errorCode === 'auth/popup-closed-by-user') {
         displayErrorMessage = "Signup cancelled. The sign-in popup was closed.";
       } else if (errorCode === 'auth/cancelled-popup-request') {
@@ -130,7 +130,7 @@ export default function RegisterForm() {
       toast({
         variant: "destructive",
         title: "Sign Up Failed",
-        description: "Configuration error. Please check the details shown on the registration form.",
+        description: displayErrorMessage,
       });
     } finally {
       setIsLoading(false);
