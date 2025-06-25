@@ -13,7 +13,7 @@ import { useState, useEffect } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle, CheckCircle } from "lucide-react";
 import { auth } from "@/lib/firebase";
-import { sendPasswordResetEmail } from "firebase/auth"; // Import the function
+import { sendPasswordResetEmail } from "firebase/auth";
 import { useLocalization } from "@/hooks/useLocalization";
 
 const forgotPasswordSchema = z.object({
@@ -28,7 +28,6 @@ export default function ForgotPasswordForm() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const { language } = useLocalization();
 
-  // Set auth language from context for emails
   useEffect(() => {
     auth.languageCode = language;
   }, [language]);
@@ -44,30 +43,30 @@ export default function ForgotPasswordForm() {
     setIsLoading(true);
     setError(null);
     setSuccessMessage(null);
-    const successMsg = "Check your inbox! If an account exists for that email, we've sent a secure link to reset your password.";
-
+    
     try {
       await sendPasswordResetEmail(auth, data.email);
-      setSuccessMessage(successMsg);
+      setSuccessMessage("Password reset email sent! If an account exists, you will receive an email with a secure link to reset your password shortly.");
       form.reset();
     } catch (e: any) {
-      // Firebase provides generic errors for password reset to prevent user enumeration.
-      // So we typically show a generic success message regardless, but for debugging we can show the error.
-      let errorMessage = "An error occurred. Please try again later.";
+      // This logic now properly displays errors to the user.
+      let errorMessage = "An unexpected error occurred. Please try again.";
       if (e.code === 'auth/invalid-email') {
-        errorMessage = "The email address is not valid.";
-      } else if (e.code) {
-        // For other Firebase errors, just show a generic message in production
-        // but the actual error message during development can be helpful.
-        console.error("Password Reset Error:", e);
+        errorMessage = "The email address you entered is not valid.";
+      } else if (e.code === 'auth/user-not-found') {
+        // While we don't want to confirm if a user exists for security,
+        // for debugging purposes, we can log it. The UI will show a generic message.
+        console.warn("Attempted password reset for non-existent user:", data.email);
+        errorMessage = "Could not send reset email. Please check your email address or try again later.";
+      } else if (e.message) {
+        // Display other Firebase errors directly to help debug configuration issues.
+        errorMessage = `Firebase Error: ${e.message}`;
       }
-      // For a better user experience, show the success message anyway
-      // to prevent attackers from checking which emails are registered.
-      setError(errorMessage); // Log the error for debugging but still show success UI.
-      setSuccessMessage(successMsg);
+      console.error("Password Reset Error:", e);
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   }
 
   return (
@@ -76,7 +75,7 @@ export default function ForgotPasswordForm() {
         {error && (
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
+            <AlertTitle>Error Sending Email</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
@@ -87,7 +86,7 @@ export default function ForgotPasswordForm() {
             <AlertDescription>{successMessage}</AlertDescription>
           </Alert>
         )}
-        {!successMessage && ( // Only show form if no success message
+        {!successMessage && (
           <FormField
             control={form.control}
             name="email"
@@ -103,7 +102,7 @@ export default function ForgotPasswordForm() {
           />
         )}
         
-        {!successMessage && ( // Only show button if no success message
+        {!successMessage && (
             <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={isLoading}>
             {isLoading ? (
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground mr-2"></div>
