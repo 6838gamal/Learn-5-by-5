@@ -13,6 +13,7 @@ import {
   getLearningStatsFromFirestore
 } from "@/lib/userActivityService";
 import { addSupportTicketToFirestore, getSupportTicketsFromFirestore, type SupportTicket } from '@/lib/supportService';
+import { Resend } from 'resend';
 
 const WordSetActionInputSchema = z.object({
   language: z.string().min(1, "Language is required."),
@@ -264,6 +265,39 @@ export interface HandleSupportRequestResult {
 export async function handleSupportRequest(data: SupportRequestInput): Promise<HandleSupportRequestResult> {
   try {
     const validatedData = SupportRequestInputSchema.parse(data);
+
+    // --- Send Email Notification ---
+    if (process.env.RESEND_API_KEY) {
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      const subject = `New Support Ticket from learn 5 by 5: ${validatedData.subject}`;
+      const emailBody = `
+        <h1>New Support Ticket</h1>
+        <p>A new support request has been submitted through the "learn 5 by 5" application.</p>
+        <h2>Ticket Details:</h2>
+        <ul>
+          <li><strong>User Email:</strong> ${validatedData.email}</li>
+          <li><strong>User ID:</strong> ${validatedData.userId || 'N/A (unauthenticated)'}</li>
+          <li><strong>Category:</strong> ${validatedData.category}</li>
+          <li><strong>Subject:</strong> ${validatedData.subject}</li>
+        </ul>
+        <h2>Description:</h2>
+        <p style="white-space: pre-wrap;">${validatedData.description}</p>
+      `;
+
+      try {
+        await resend.emails.send({
+          from: 'LinguaLeap Support <onboarding@resend.dev>', // Resend requires a verified domain, using their example for now.
+          to: ['applicationsdeveloper6838@gmail.com'],
+          subject: subject,
+          html: emailBody,
+        });
+      } catch (emailError) {
+        console.error("Failed to send support email via Resend, but continuing to save ticket:", emailError);
+        // Do not block the process if email fails. The ticket will still be in Firestore.
+      }
+    } else {
+      console.warn("RESEND_API_KEY not found. Skipping email notification for support ticket.");
+    }
     
     if (!validatedData.userId) {
       console.log("Conceptual Support Request Received (Unauthenticated):", validatedData);
