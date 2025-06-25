@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -95,15 +94,6 @@ export default function RegisterForm() {
     
     try {
       const result = await signInWithPopup(auth, provider);
-      
-      // This gives you a Google Access Token. You can use it to access the Google API.
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      if (credential) {
-        const token = credential.accessToken;
-        // You can now use the token to access Google APIs.
-        console.log("Google Access Token:", token);
-      }
-      
       // The signed-in user info.
       const user = result.user;
       
@@ -117,12 +107,8 @@ export default function RegisterForm() {
       // Handle Errors here.
       const errorCode = e.code;
       const errorMessage = e.message;
-      // The email of the user's account used.
-      const email = e.customData?.email;
-      // The AuthCredential type that was used.
-      const credential = GoogleAuthProvider.credentialFromError(e);
-
-      console.error(`${providerName} signup error:`, { errorCode, errorMessage, email, credential });
+      
+      console.error(`${providerName} signup error:`, e);
 
       let displayErrorMessage = "An unexpected error occurred during social signup.";
       if (errorCode === 'auth/operation-not-allowed') {
