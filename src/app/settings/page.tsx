@@ -21,7 +21,7 @@ import {
 import type { NumberOfWordsSetting, AppLanguageSetting, UserSettings } from '@/lib/userSettingsService';
 import { TARGET_LANGUAGES, TARGET_FIELDS, LANGUAGES as APP_LANGUAGES_OPTIONS } from '@/constants/data';
 import { auth } from '@/lib/firebase';
-import { onAuthStateChanged, type User } from 'firebase/auth';
+import { onAuthStateChanged, type User, sendPasswordResetEmail } from 'firebase/auth';
 import { LanguageContext } from '@/contexts/LanguageContext'; // Import LanguageContext
 import { useLocalization } from '@/hooks/useLocalization'; // Import useLocalization
 import { Badge } from '@/components/ui/badge';
@@ -36,6 +36,7 @@ export default function SettingsPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSendingResetEmail, setIsSendingResetEmail] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [pendingNumberOfWords, setPendingNumberOfWords] = useState<NumberOfWordsSetting>(5);
@@ -141,12 +142,33 @@ export default function SettingsPage() {
     setIsSaving(false);
   };
 
-  const handleChangePassword = () => {
-    toast({
-      title: "Feature Coming Soon",
-      description: "Password change functionality is not yet implemented.",
-      variant: "default",
-    });
+  const handleChangePassword = async () => {
+    if (!currentUser || !currentUser.email) {
+      toast({
+        variant: "destructive",
+        title: t('error'),
+        description: t('toastPasswordResetNoUser'),
+      });
+      return;
+    }
+
+    setIsSendingResetEmail(true);
+    try {
+      await sendPasswordResetEmail(auth, currentUser.email);
+      toast({
+        title: t('toastPasswordResetSentTitle'),
+        description: t('toastPasswordResetSentDescription', { email: currentUser.email }),
+      });
+    } catch (error) {
+      console.error("Error sending password reset email:", error);
+      toast({
+        variant: "destructive",
+        title: t('toastPasswordResetFailedTitle'),
+        description: t('toastPasswordResetFailedDescription'),
+      });
+    } finally {
+      setIsSendingResetEmail(false);
+    }
   };
   
   const targetLanguageDisplayNode = React.useMemo(() => {
@@ -379,11 +401,16 @@ export default function SettingsPage() {
               <Unlock className="w-6 h-6 text-accent me-2" />
               {t('settingsAccountSecurityTitle')}
             </h3>
-            <Button onClick={handleChangePassword} variant="outline" disabled={isSaving}>
-              {t('settingsChangePasswordButton')}
+            <Button onClick={handleChangePassword} variant="outline" disabled={isSaving || isSendingResetEmail}>
+              {isSendingResetEmail ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin me-2" />
+                  {t('settingsSendingEmailButton')}
+                </>
+              ) : t('settingsChangePasswordButton')}
             </Button>
             <p className="text-sm text-muted-foreground">
-              {t('settingsChangePasswordDescription')} {t('settingsConceptualControl')}
+              {t('settingsChangePasswordDescription')}
             </p>
           </div>
 

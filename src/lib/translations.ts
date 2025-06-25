@@ -38,6 +38,7 @@ export interface Translations {
   settingsAppLanguageDescription: string;
   settingsAccountSecurityTitle: string;
   settingsChangePasswordButton: string;
+  settingsSendingEmailButton: string;
   settingsChangePasswordDescription: string;
   settingsConceptualControl: string;
   settingsSaveButton: string;
@@ -53,6 +54,11 @@ export interface Translations {
   toastPremiumLanguageDescription: string;
   toastAccessibilityUnderDevelopmentTitle: string;
   toastAccessibilityUnderDevelopmentDescription: string;
+  toastPasswordResetSentTitle: string;
+  toastPasswordResetSentDescription: (replacements: { email: string }) => string;
+  toastPasswordResetFailedTitle: string;
+  toastPasswordResetFailedDescription: string;
+  toastPasswordResetNoUser: string;
   // Other
   loading: string;
   loginRequiredTitle: string;
@@ -269,7 +275,8 @@ export const translations: Record<"en" | "ar", Translations> = {
     settingsAppLanguageDescription: "Choose your preferred display language for the LinguaLeap interface. English and Arabic are free. Other languages are premium features.",
     settingsAccountSecurityTitle: "Account Security",
     settingsChangePasswordButton: "Change Password",
-    settingsChangePasswordDescription: "Secure your account by updating your password.",
+    settingsSendingEmailButton: "Sending Email...",
+    settingsChangePasswordDescription: "Click to send a secure password reset link to your email.",
     settingsConceptualControl: "(This is a conceptual control for now.)",
     settingsSaveButton: "Save Settings",
     settingsSavingButton: "Saving...",
@@ -283,6 +290,11 @@ export const translations: Record<"en" | "ar", Translations> = {
     toastPremiumLanguageDescription: "Support for this language is coming soon! Your selection has not been changed.",
     toastAccessibilityUnderDevelopmentTitle: "Feature in Development",
     toastAccessibilityUnderDevelopmentDescription: "Enhanced accessibility sections for deaf and hard-of-hearing users are under development. Your preference has been saved.",
+    toastPasswordResetSentTitle: "Password Reset Email Sent",
+    toastPasswordResetSentDescription: ({ email }) => `A link to reset your password has been sent to ${email}. Please check your inbox.`,
+    toastPasswordResetFailedTitle: "Failed to Send Email",
+    toastPasswordResetFailedDescription: "Could not send the password reset email. Please try again later.",
+    toastPasswordResetNoUser: "No authenticated user found. Please log in again.",
     loading: "Loading...",
     loginRequiredTitle: "Login Required",
     loginRequiredDescription: "Please log in to access this page.",
@@ -485,7 +497,8 @@ export const translations: Record<"en" | "ar", Translations> = {
     settingsAppLanguageDescription: "اختر لغة العرض المفضلة لواجهة لينجوا ليب. الإنجليزية والعربية مجانيتان. اللغات الأخرى هي ميزات مميزة.",
     settingsAccountSecurityTitle: "أمان الحساب",
     settingsChangePasswordButton: "تغيير كلمة المرور",
-    settingsChangePasswordDescription: "قم بتأمين حسابك عن طريق تحديث كلمة المرور الخاصة بك.",
+    settingsSendingEmailButton: "جاري إرسال البريد...",
+    settingsChangePasswordDescription: "انقر لإرسال رابط آمن لإعادة تعيين كلمة المرور إلى بريدك الإلكتروني.",
     settingsConceptualControl: "(هذا عنصر تحكم مفاهيمي حاليًا.)",
     settingsSaveButton: "حفظ الإعدادات",
     settingsSavingButton: "جاري الحفظ...",
@@ -499,6 +512,11 @@ export const translations: Record<"en" | "ar", Translations> = {
     toastPremiumLanguageDescription: "دعم هذه اللغة سيأتي قريبًا! لم يتم تغيير اختيارك الحالي.",
     toastAccessibilityUnderDevelopmentTitle: "ميزة قيد التطوير",
     toastAccessibilityUnderDevelopmentDescription: "الأقسام المخصصة للصم وضعاف السمع قيد التطوير. تم حفظ تفضيلك.",
+    toastPasswordResetSentTitle: "تم إرسال بريد إعادة تعيين كلمة المرور",
+    toastPasswordResetSentDescription: ({ email }) => `تم إرسال رابط لإعادة تعيين كلمة المرور إلى ${email}. يرجى التحقق من بريدك الوارد.`,
+    toastPasswordResetFailedTitle: "فشل إرسال البريد الإلكتروني",
+    toastPasswordResetFailedDescription: "تعذر إرسال بريد إعادة تعيين كلمة المرور. يرجى المحاولة مرة أخرى لاحقًا.",
+    toastPasswordResetNoUser: "لم يتم العثور على مستخدم مسجل الدخول. يرجى تسجيل الدخول مرة أخرى.",
     loading: "جاري التحميل...",
     loginRequiredTitle: "تسجيل الدخول مطلوب",
     loginRequiredDescription: "يرجى تسجيل الدخول للوصول إلى هذه الصفحة.",
