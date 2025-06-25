@@ -15,6 +15,20 @@ import {
 import { addSupportTicketToFirestore, getSupportTicketsFromFirestore, type SupportTicket } from '@/lib/supportService';
 import { Resend } from 'resend';
 
+// Helper function for a more informative API key error.
+function getApiKeyError(): string | null {
+  if (!process.env.GOOGLE_API_KEY) {
+    const isDev = process.env.NODE_ENV === 'development';
+    const devHint = "Hint: Create a .env file in your project root and add the line: GOOGLE_API_KEY='your_api_key'.";
+    const prodHint = "Hint: Ensure the GOOGLE_API_KEY environment variable is set in your hosting provider's settings (e.g., Vercel, Firebase App Hosting).";
+    const errorMessage = `AI Service API Key is not configured. ${isDev ? devHint : prodHint}`;
+    
+    console.error("CRITICAL: GOOGLE_API_KEY is not set.");
+    return errorMessage;
+  }
+  return null;
+}
+
 const WordSetActionInputSchema = z.object({
   language: z.string().min(1, "Language is required."),
   field: z.string().min(1, "Field is required."),
@@ -56,9 +70,9 @@ function getErrorMessage(error: unknown, defaultMessage: string): string {
 export async function handleGenerateWordSet(
   data: GenerateWordSetInput
 ): Promise<GenerateWordSetActionResult> {
-  if (!process.env.GOOGLE_API_KEY) {
-    console.error("CRITICAL: GOOGLE_API_KEY is not set for word generation.");
-    return { error: "AI Service API Key is not configured. Please contact support or check server configuration." };
+  const apiKeyError = getApiKeyError();
+  if (apiKeyError) {
+    return { error: apiKeyError };
   }
   try {
     const validatedData = WordSetActionInputSchema.parse(data); 
@@ -98,9 +112,9 @@ export interface GenerateConversationActionResult {
 export async function handleGenerateConversation(
   data: GenerateConversationInput
 ): Promise<GenerateConversationActionResult> {
-  if (!process.env.GOOGLE_API_KEY) {
-    console.error("CRITICAL: GOOGLE_API_KEY is not set for conversation generation.");
-    return { error: "AI Service API Key is not configured. Please contact support or check server configuration." };
+  const apiKeyError = getApiKeyError();
+  if (apiKeyError) {
+    return { error: apiKeyError };
   }
   try {
     const validatedData = ConversationActionInputSchema.parse(data);
@@ -130,10 +144,10 @@ export interface GenerateAudioActionResult {
 }
 
 export async function handleGenerateAudio(text: string): Promise<GenerateAudioActionResult> {
-   if (!process.env.GOOGLE_API_KEY) {
-    console.error("CRITICAL: GOOGLE_API_KEY is not set for audio generation.");
-    return { error: "AI Service API Key is not configured. Please contact support or check server configuration." };
-  }
+   const apiKeyError = getApiKeyError();
+   if (apiKeyError) {
+    return { error: apiKeyError };
+   }
   try {
     const validatedText = GenerateAudioActionInputSchema.parse(text);
     const result: GenerateAudioOutput = await generateAudio(validatedText);
