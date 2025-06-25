@@ -127,3 +127,6 @@ export const SUPPORT_CATEGORIES: SelectionOption[] = [
   { value: "feedback_suggestion", label: "Feedback & Suggestion" },
   { value: "other", label: "Other" },
 ];
+
+export const GENERATION_LIMIT = 3;
+export const WINDOW_HOURS = 20;

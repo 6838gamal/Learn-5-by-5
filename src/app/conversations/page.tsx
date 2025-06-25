@@ -163,6 +163,7 @@ export default function ConversationsPage() {
       language: settingsTargetLanguage,
       field: settingsTargetField,
       selectedWords: selectedWords,
+      userId: currentUser?.uid,
     });
 
     setIsLoadingConversation(false);

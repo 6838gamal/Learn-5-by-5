@@ -206,6 +206,7 @@ export default function LearnClientPage() {
       language: settingsTargetLanguage,
       field: settingsTargetField,
       count: currentWordsToGenerate,
+      userId: currentUser?.uid,
     });
 
     setIsLoadingGeneration(false);

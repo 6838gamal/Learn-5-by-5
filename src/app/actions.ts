@@ -14,6 +14,11 @@ import {
 } from "@/lib/userActivityService";
 import { addSupportTicketToFirestore, getSupportTicketsFromFirestore, type SupportTicket } from '@/lib/supportService';
 import { Resend } from 'resend';
+import { 
+  checkRateLimit, 
+  logGeneration,
+} from "@/lib/rateLimitService";
+import { GENERATION_LIMIT, WINDOW_HOURS } from "@/constants/data";
 
 // Helper function for a more informative API key error.
 function getApiKeyError(): string | null {
@@ -68,17 +73,42 @@ function getErrorMessage(error: unknown, defaultMessage: string): string {
 }
 
 export async function handleGenerateWordSet(
-  data: GenerateWordSetInput
+  data: GenerateWordSetInput & { userId?: string }
 ): Promise<GenerateWordSetActionResult> {
   const apiKeyError = getApiKeyError();
   if (apiKeyError) {
     return { error: apiKeyError };
   }
   try {
-    const validatedData = WordSetActionInputSchema.parse(data); 
+    const { userId, ...wordSetInput } = data;
+    const validatedData = WordSetActionInputSchema.parse(wordSetInput); 
+    
+    // --- Rate Limiting Logic ---
+    if (userId) {
+      const { isAllowed, hoursUntilReset } = await checkRateLimit(
+        userId,
+        'wordSet',
+        validatedData.language,
+        validatedData.field
+      );
+      if (!isAllowed) {
+        return { 
+          error: `You have reached the generation limit (${GENERATION_LIMIT} sets per ${WINDOW_HOURS} hours) for this language and field. Please try again in about ${hoursUntilReset} hours.` 
+        };
+      }
+    }
+
     const result: GenerateWordSetOutput = await generateWordSet(validatedData); 
     
     if (result.wordEntries && result.wordEntries.length > 0) {
+      if (userId) {
+        await logGeneration(
+          userId,
+          'wordSet',
+          validatedData.language,
+          validatedData.field
+        );
+      }
       return { 
         wordEntries: result.wordEntries, 
         language: validatedData.language, 
@@ -110,16 +140,41 @@ export interface GenerateConversationActionResult {
 }
 
 export async function handleGenerateConversation(
-  data: GenerateConversationInput
+  data: GenerateConversationInput & { userId?: string }
 ): Promise<GenerateConversationActionResult> {
   const apiKeyError = getApiKeyError();
   if (apiKeyError) {
     return { error: apiKeyError };
   }
   try {
-    const validatedData = ConversationActionInputSchema.parse(data);
+    const { userId, ...conversationInput } = data;
+    const validatedData = ConversationActionInputSchema.parse(conversationInput);
+
+    // --- Rate Limiting Logic ---
+    if (userId) {
+      const { isAllowed, hoursUntilReset } = await checkRateLimit(
+        userId,
+        'conversation',
+        validatedData.language,
+        validatedData.field
+      );
+      if (!isAllowed) {
+        return { 
+          error: `You have reached the generation limit (${GENERATION_LIMIT} conversations per ${WINDOW_HOURS} hours) for this language and field. Please try again in about ${hoursUntilReset} hours.` 
+        };
+      }
+    }
+
     const result: GenerateConversationOutput = await generateConversation(validatedData);
     if (result.conversation) {
+      if (userId) {
+        await logGeneration(
+          userId,
+          'conversation',
+          validatedData.language,
+          validatedData.field
+        );
+      }
       return { 
         conversation: result.conversation, 
         language: validatedData.language, 
