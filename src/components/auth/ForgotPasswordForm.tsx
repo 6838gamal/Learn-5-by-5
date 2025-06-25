@@ -25,7 +25,7 @@ type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 export default function ForgotPasswordForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
   const { language } = useLocalization();
 
   useEffect(() => {
@@ -42,11 +42,11 @@ export default function ForgotPasswordForm() {
   async function onSubmit(data: ForgotPasswordFormValues) {
     setIsLoading(true);
     setError(null);
-    setSuccessMessage(null);
+    setSubmittedEmail(null);
     
     try {
       await sendPasswordResetEmail(auth, data.email);
-      setSuccessMessage("Password reset email sent! If an account exists, you will receive an email with a secure link to reset your password shortly.");
+      setSubmittedEmail(data.email);
       form.reset();
     } catch (e: any) {
       // This logic now properly displays errors to the user.
@@ -79,36 +79,38 @@ export default function ForgotPasswordForm() {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        {successMessage && (
+        {submittedEmail && !error && (
           <Alert variant="default" className="bg-green-50 border-green-300 text-green-700">
             <CheckCircle className="h-4 w-4 text-green-600" />
             <AlertTitle>Success</AlertTitle>
-            <AlertDescription>{successMessage}</AlertDescription>
+            <AlertDescription>
+              If an account exists for <strong>{submittedEmail}</strong>, you will receive an email with a secure link to reset your password shortly. Please check your spam folder if you don&apos;t see it.
+            </AlertDescription>
           </Alert>
         )}
-        {!successMessage && (
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center gap-2"><Mail className="w-4 h-4" />Email Address</FormLabel>
-                <FormControl>
-                  <Input type="email" placeholder="you@example.com" {...field} disabled={isLoading} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
         
-        {!successMessage && (
+        {!submittedEmail && (
+          <>
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2"><Mail className="w-4 h-4" />Email Address</FormLabel>
+                  <FormControl>
+                    <Input type="email" placeholder="you@example.com" {...field} disabled={isLoading} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={isLoading}>
-            {isLoading ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground mr-2"></div>
-            ) : null}
-            Send Password Reset Link
+              {isLoading ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground mr-2"></div>
+              ) : null}
+              Send Password Reset Link
             </Button>
+          </>
         )}
 
         <p className="mt-6 text-center text-sm">
