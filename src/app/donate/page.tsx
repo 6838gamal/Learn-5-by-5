@@ -9,9 +9,31 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Heart, CreditCard, Home, AlertTriangle, DollarSign, CheckCircle } from "lucide-react";
+import { Heart, CreditCard, Home, AlertTriangle, DollarSign, CheckCircle, Instagram, Linkedin, Facebook } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { useLocalization } from '@/hooks/useLocalization';
+import { Separator } from '@/components/ui/separator';
+
+// Custom SVG Icons
+const XIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+);
+const TelegramIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+);
+const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/></svg>
+);
+
+const socialLinks = [
+  { name: 'Instagram', href: 'https://www.instagram.com/gamal_almaqtary_tech_services/', icon: <Instagram className="h-5 w-5" /> },
+  { name: 'Facebook', href: 'https://www.facebook.com/jmal.alhwysh.2025?mibextid=rS40aB7S9Ucbxw6v', icon: <Facebook className="h-5 w-5" /> },
+  { name: 'X', href: 'https://x.com/alhwysh787472?s=09', icon: <XIcon className="h-5 w-5" /> },
+  { name: 'Telegram', href: 'https://t.me/Gamalalhwish', icon: <TelegramIcon className="h-5 w-5" /> },
+  { name: 'WhatsApp', href: 'https://wa.me/774440982', icon: <WhatsAppIcon className="h-5 w-5" /> },
+  { name: 'LinkedIn', href: 'https://www.linkedin.com/in/gamal-alhwish', icon: <Linkedin className="h-5 w-5" /> },
+];
+
 
 // Text placeholders for payment method logos
 const PaymentMethodPlaceholders = [
@@ -156,6 +178,20 @@ export default function DonatePage() {
               <Home className="w-5 h-5" /> {t('settingsReturnToHomeButton')}
             </Link>
           </Button>
+
+          <div className="w-full pt-6 mt-6 border-t">
+            <p className="text-center text-sm font-medium text-muted-foreground mb-3">Or contact the developer directly:</p>
+            <div className="flex justify-center flex-wrap gap-3">
+              {socialLinks.map((link) => (
+                <Button key={link.name} asChild variant="outline" size="icon" className="rounded-full">
+                  <a href={link.href} target="_blank" rel="noopener noreferrer" aria-label={link.name}>
+                    {link.icon}
+                  </a>
+                </Button>
+              ))}
+            </div>
+          </div>
+
         </CardFooter>
       </Card>
     </div>
